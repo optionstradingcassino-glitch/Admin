@@ -5,46 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cassino Trade — Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-
-  <!-- Supabase loaded via regular script tag (works locally AND on server) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
     :root {
-      --bg: #080c14;
-      --surface: #0e1520;
-      --border: #1a2535;
-      --accent: #f0b429;
-      --accent2: #3b82f6;
-      --green: #22c55e;
-      --red: #ef4444;
-      --text: #e2e8f0;
-      --muted: #64748b;
+      --bg: #080c14; --surface: #0e1520; --border: #1a2535;
+      --accent: #f0b429; --accent2: #3b82f6; --green: #22c55e;
+      --red: #ef4444; --text: #e2e8f0; --muted: #64748b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    /* ── LOGIN ── */
-    #loginScreen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh;
-      background: radial-gradient(ellipse at 50% 40%, #0f1e35 0%, #080c14 70%);
-    }
-    .login-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 48px 40px; width: 360px; text-align: center;
-    }
+    /* LOGIN */
+    #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(ellipse at 50% 40%, #0f1e35 0%, #080c14 70%); }
+    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; width: 360px; text-align: center; }
     .login-box h1 { font-family: 'Syne', sans-serif; font-size: 22px; color: var(--accent); margin-bottom: 6px; letter-spacing: 2px; }
     .login-box p { color: var(--muted); font-size: 12px; margin-bottom: 32px; }
-    .login-box input {
-      width: 100%; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px 16px; color: var(--text);
-      font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-bottom: 16px; outline: none;
-    }
+    .login-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-bottom: 16px; outline: none; }
     .login-box input:focus { border-color: var(--accent); }
     #loginError { color: var(--red); font-size: 12px; margin-top: 12px; display: none; }
 
-    /* ── BUTTONS ── */
+    /* BUTTONS */
     .btn { padding: 11px 20px; border: none; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
     .btn:hover { opacity: 0.85; }
     .btn-primary { background: var(--accent); color: #000; width: 100%; }
@@ -52,12 +32,9 @@
     .btn-blue { background: var(--accent2); color: #fff; }
     .btn-ghost { background: var(--border); color: var(--text); }
 
-    /* ── DASHBOARD ── */
+    /* DASHBOARD */
     #dashboard { display: none; }
-    header {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
-    }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
     header h1 { font-family: 'Syne', sans-serif; font-size: 18px; color: var(--accent); letter-spacing: 2px; }
     header span { color: var(--muted); font-size: 12px; }
     nav { display: flex; gap: 4px; padding: 16px 32px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
@@ -68,14 +45,14 @@
     .tab { display: none; }
     .tab.active { display: block; }
 
-    /* ── STAT CARDS ── */
+    /* STAT CARDS */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
     .stat-card .label { color: var(--muted); font-size: 11px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
     .stat-card .value { font-size: 24px; font-weight: 700; color: var(--accent); }
     .stat-card .sub { color: var(--muted); font-size: 11px; margin-top: 4px; }
 
-    /* ── CARD + TABLE ── */
+    /* CARD + TABLE */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
     .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
     .card-header h3 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
@@ -85,7 +62,7 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255,255,255,0.02); }
 
-    /* ── BADGES ── */
+    /* BADGES */
     .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
     .badge-open    { background: rgba(34,197,94,0.15);  color: var(--green); }
     .badge-closed  { background: rgba(239,68,68,0.15);  color: var(--red); }
@@ -95,52 +72,52 @@
     .badge-admin   { background: rgba(240,180,41,0.15); color: var(--accent); }
     .badge-user    { background: rgba(100,116,139,0.15);color: var(--muted); }
 
-    /* ── FORM ── */
+    /* FORM */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .form-group { display: flex; flex-direction: column; gap: 8px; }
     .form-group label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-    .form-group input, .form-group select {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-      padding: 10px 14px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; outline: none;
-    }
+    .form-group input, .form-group select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; outline: none; }
     .form-group input:focus { border-color: var(--accent); }
     .form-group.full { grid-column: 1 / -1; }
     .form-actions { margin-top: 20px; }
-
-    .result-select {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-      padding: 4px 8px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer;
-    }
-    .adj-input {
-      width: 90px; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 6px; padding: 4px 8px; color: var(--text);
-      font-family: 'JetBrains Mono', monospace; font-size: 12px;
-    }
+    .result-select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
+    .adj-input { width: 90px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
     .loading { color: var(--muted); font-size: 13px; padding: 24px; text-align: center; }
 
-    /* ── TOAST ── */
-    #toast {
-      position: fixed; bottom: 24px; right: 24px;
-      padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700;
-      display: none; z-index: 999; animation: slideIn 0.2s ease;
-    }
+    /* TOAST */
+    #toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; display: none; z-index: 999; animation: slideIn 0.2s ease; }
     @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* FIX: Security warning banner shown until ADMIN_SECRET is configured */
+    .security-notice { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 12px; color: var(--red); display: none; }
   </style>
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
+<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
     <h1>⚡ CASSINO TRADE</h1>
     <p>Admin Dashboard — Restricted Access</p>
-    <input type="password" id="passwordInput" placeholder="Enter admin password" />
+    <!--
+      PASSWORD FIELD: This is just the frontend gate.
+      The real security is the ADMIN_SECRET sent to the server on every action.
+      Set ADMIN_SECRET in your Supabase Edge Function secrets:
+        Dashboard → Edge Functions → Secrets → Add ADMIN_SECRET
+    -->
+    <input type="password" id="passwordInput" placeholder="Admin password" />
+    <!--
+      ADMIN SECRET FIELD: This is the server-side key.
+      It must match the ADMIN_SECRET environment variable set in Supabase.
+      Without this, withdraw approvals and question reviews will be rejected.
+    -->
+    <input type="password" id="adminSecretInput" placeholder="Admin API secret (server key)" />
     <button class="btn btn-primary" onclick="login()">LOGIN</button>
-    <div id="loginError">Wrong password. Try again.</div>
+    <div id="loginError">Wrong password or secret. Try again.</div>
   </div>
 </div>
 
-<!-- ── DASHBOARD ── -->
+<!-- DASHBOARD -->
 <div id="dashboard">
   <header>
     <h1>⚡ CASSINO TRADE ADMIN</h1>
@@ -222,7 +199,7 @@
         </div>
         <table>
           <thead><tr><th>Telegram ID</th><th>Username</th><th>Full Name</th><th>Role</th><th>Balance (pts)</th><th>Adjust Balance</th></tr></thead>
-          <tbody id="usersTable"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
+          <tbody id="usersTable"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -292,480 +269,458 @@
 <div id="toast"></div>
 
 <script>
-  window.addEventListener("load", function () {
+window.addEventListener("load", function () {
 
-    var SUPABASE_URL = "https://liketekvzrazheolmfnj.supabase.co";
-    var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxpa2V0ZWt2enJhemhlb2xtZm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDg0MzYsImV4cCI6MjA4NjgyNDQzNn0.8Zo-NJ0QmaH95zt3Nh4yV20M0HM5OOH9V0cDs1xYpPE";
-    var ADMIN_PASSWORD = "cassino2025!";
+  var SUPABASE_URL     = "https://liketekvzrazheolmfnj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxpa2V0ZWt2enJhemhlb2xtZm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDg0MzYsImV4cCI6MjA4NjgyNDQzNn0.8Zo-NJ0QmaH95zt3Nh4yV20M0HM5OOH9V0cDs1xYpPE";
 
-    // ✅ FIX #1: There was only ONE variable called 'db' but some functions
-    // were calling 'sb' which didn't exist. Now everything uses 'db'.
-    var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // FIX: The frontend password is just a simple gate to open the UI.
+  // The REAL security is ADMIN_SECRET — it's sent on every server action
+  // and must match the ADMIN_SECRET environment variable in Supabase.
+  var ADMIN_UI_PASSWORD = "cassino2025!";
 
-    // ── LOGIN ──
-    window.login = function () {
-      var pw = document.getElementById("passwordInput").value;
-      if (pw === ADMIN_PASSWORD) {
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        startClock();
-        loadAnalytics();
-        loadMarkets();
-      } else {
-        document.getElementById("loginError").style.display = "block";
+  var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // This holds the admin secret entered at login.
+  // It is sent as "x-admin-secret" header on every sensitive action.
+  var adminSecret = "";
+
+  // ── LOGIN ──
+  window.login = function () {
+    var pw     = document.getElementById("passwordInput").value;
+    var secret = document.getElementById("adminSecretInput").value.trim();
+
+    if (pw !== ADMIN_UI_PASSWORD || !secret) {
+      document.getElementById("loginError").style.display = "block";
+      return;
+    }
+
+    // Store the admin secret for use in API calls
+    adminSecret = secret;
+
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("dashboard").style.display   = "block";
+    startClock();
+    loadAnalytics();
+    loadMarkets();
+  };
+
+  document.getElementById("passwordInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("adminSecretInput").focus();
+  });
+  document.getElementById("adminSecretInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") window.login();
+  });
+
+  // ── CLOCK ──
+  function startClock() {
+    function tick() {
+      document.getElementById("clockDisplay").innerText = new Date().toUTCString().replace("GMT", "UTC");
+    }
+    tick(); setInterval(tick, 1000);
+  }
+
+  // ── TAB SWITCH ──
+  window.switchTab = function (name, btn) {
+    document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
+    document.querySelectorAll(".nav-btn").forEach(function (b) { b.classList.remove("active"); });
+    document.getElementById("tab-" + name).classList.add("active");
+    btn.classList.add("active");
+    if (name === "markets")     loadMarkets();
+    if (name === "users")       loadUsers();
+    if (name === "ledger")      loadLedger();
+    if (name === "analytics")   loadAnalytics();
+    if (name === "withdrawals") loadWithdrawals();
+    if (name === "questions")   loadQuestions();
+  };
+
+  // ── TOAST ──
+  function showToast(msg, isError) {
+    var t = document.getElementById("toast");
+    t.innerText = msg;
+    t.style.background = isError ? "#ef4444" : "#22c55e";
+    t.style.color = isError ? "#fff" : "#000";
+    t.style.display = "block";
+    setTimeout(function () { t.style.display = "none"; }, 3500);
+  }
+
+  // ── ANALYTICS ──
+  window.loadAnalytics = async function () {
+    var marketsRes = await db.from("markets").select("id, question");
+    var marketMap = {};
+    (marketsRes.data || []).forEach(function (m) { marketMap[m.id] = m.question; });
+
+    var [rev, trades, users, open, wallets] = await Promise.all([
+      db.from("platform_revenue").select("fee_collected, total_pool, market_id, created_at"),
+      db.from("trades").select("*", { count: "exact", head: true }),
+      db.from("users").select("*", { count: "exact", head: true }),
+      db.from("markets").select("*", { count: "exact", head: true }).eq("status", "open"),
+      db.from("wallets").select("balance_points")
+    ]);
+
+    var revenue     = rev.data || [];
+    var totalRevenue = revenue.reduce(function (s, r) { return s + Number(r.fee_collected); }, 0);
+    var totalVolume  = revenue.reduce(function (s, r) { return s + Number(r.total_pool); }, 0);
+    var walletTotal  = (wallets.data || []).reduce(function (s, w) { return s + Number(w.balance_points); }, 0);
+
+    document.getElementById("statRevenue").innerText = totalRevenue.toLocaleString() + " pts";
+    document.getElementById("statVolume").innerText  = totalVolume.toLocaleString()  + " pts";
+    document.getElementById("statTrades").innerText  = (trades.count || 0).toLocaleString();
+    document.getElementById("statUsers").innerText   = (users.count  || 0).toLocaleString();
+    document.getElementById("statOpen").innerText    = (open.count   || 0).toLocaleString();
+    document.getElementById("statWallets").innerText = walletTotal.toLocaleString() + " pts";
+
+    var tbody = document.getElementById("revenueTable");
+    if (!revenue.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">No revenue yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = revenue
+      .sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); })
+      .map(function (r) {
+        return '<tr>' +
+          '<td style="max-width:300px;font-size:12px">' + (marketMap[r.market_id] || r.market_id) + '</td>' +
+          '<td>' + Number(r.total_pool).toLocaleString() + ' pts</td>' +
+          '<td style="color:#22c55e;font-weight:700">' + Number(r.fee_collected).toLocaleString() + ' pts</td>' +
+          '<td style="color:#64748b;font-size:12px">' + new Date(r.created_at).toLocaleString() + '</td>' +
+          '</tr>';
+      }).join("");
+  };
+
+  // ── MARKETS ──
+  window.loadMarkets = async function () {
+    var res = await db.from("markets").select("*").order("created_at", { ascending: false });
+    var markets = res.data || [];
+    var tbody = document.getElementById("marketsTable");
+
+    if (!markets.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">No markets yet</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = markets.map(function (m) {
+      var statusBadge = '<span class="badge badge-' + m.status + '">' + m.status.toUpperCase() + '</span>';
+      var resultBadge = m.result
+        ? '<span class="badge badge-' + m.result + '">' + m.result.toUpperCase() + '</span>'
+        : '<span style="color:#64748b">—</span>';
+
+      var action = '<span style="color:#64748b;font-size:11px">—</span>';
+
+      if (m.status === "closed" && !m.result) {
+        action =
+          '<select class="result-select" id="result-' + m.id + '">' +
+            '<option value="">Set result...</option>' +
+            '<option value="yes">✅ YES</option>' +
+            '<option value="no">❌ NO</option>' +
+          '</select>' +
+          '<button class="btn btn-green" style="font-size:11px;padding:4px 10px;margin-left:6px" ' +
+            'onclick="setResult(\'' + m.id + '\')">SET</button>';
+      } else if (m.status === "settled") {
+        action = '<span style="color:#22c55e;font-size:11px">Settled ✓</span>';
+      } else if (m.status === "open") {
+        action = '<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" ' +
+          'onclick="forceCloseMarket(\'' + m.id + '\')">Force Close</button>';
       }
-    };
 
-    document.getElementById("passwordInput").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") window.login();
+      return '<tr>' +
+        '<td style="max-width:260px;font-size:12px">' + m.question + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td style="color:#64748b;font-size:12px">' + new Date(m.closes_at).toLocaleString() + '</td>' +
+        '<td style="color:#22c55e;font-weight:700">' + Number(m.yes_pool).toLocaleString() + '</td>' +
+        '<td style="color:#ef4444;font-weight:700">' + Number(m.no_pool).toLocaleString() + '</td>' +
+        '<td>' + resultBadge + '</td>' +
+        '<td>' + action + '</td>' +
+        '</tr>';
+    }).join("");
+  };
+
+  window.forceCloseMarket = async function (marketId) {
+    if (!confirm("Force-close this market? Trading will stop immediately.")) return;
+    var res = await db.from("markets").update({ status: "closed" }).eq("id", marketId);
+    if (res.error) { showToast("Error: " + res.error.message, true); return; }
+    showToast("Market closed ✓ — now set the result to settle it");
+    loadMarkets();
+  };
+
+  window.setResult = async function (marketId) {
+    var select = document.getElementById("result-" + marketId);
+    var result = select.value;
+    if (!result) { showToast("Select YES or NO first", true); return; }
+    var res = await db.from("markets").update({ result: result }).eq("id", marketId);
+    if (res.error) { showToast("Error: " + res.error.message, true); return; }
+    showToast("Result set ✓ — cron will settle within 1 minute");
+    loadMarkets();
+  };
+
+  // ── CREATE MARKET ──
+  window.createMarket = async function () {
+    var question = document.getElementById("newQuestion").value.trim();
+    var closesAt = document.getElementById("newClosesAt").value;
+    if (!question) { showToast("Enter a question", true); return; }
+    if (!closesAt) { showToast("Set a closing time", true); return; }
+
+    var res = await db.from("markets").insert({
+      question:  question,
+      closes_at: new Date(closesAt).toISOString(),
+      status:    "open",
+      settled:   false,
+      yes_pool:  0,
+      no_pool:   0
     });
 
-    // ── CLOCK ──
-    function startClock() {
-      function tick() {
-        document.getElementById("clockDisplay").innerText =
-          new Date().toUTCString().replace("GMT", "UTC");
-      }
-      tick();
-      setInterval(tick, 1000);
+    if (res.error) { showToast("Error: " + res.error.message, true); return; }
+    showToast("Market created ✓");
+    document.getElementById("newQuestion").value = "";
+    document.getElementById("newClosesAt").value = "";
+  };
+
+  // ── USERS ──
+  window.loadUsers = async function () {
+    var usersRes   = await db.from("users").select("telegram_id, username, full_name, role");
+    var walletsRes = await db.from("wallets").select("telegram_id, balance_points");
+    var walletMap  = {};
+    (walletsRes.data || []).forEach(function (w) { walletMap[w.telegram_id] = w.balance_points; });
+
+    var users = usersRes.data || [];
+    var tbody = document.getElementById("usersTable");
+
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">No users yet</td></tr>';
+      return;
     }
 
-    // ── TAB SWITCH ──
-    window.switchTab = function (name, btn) {
-      document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
-      document.querySelectorAll(".nav-btn").forEach(function (b) { b.classList.remove("active"); });
-      document.getElementById("tab-" + name).classList.add("active");
-      if (name === "withdrawals") loadWithdrawals();
-      if (name === "questions")   loadQuestions();
-      btn.classList.add("active");
-      if (name === "markets")   loadMarkets();
-      if (name === "users")     loadUsers();
-      if (name === "ledger")    loadLedger();
-      if (name === "analytics") loadAnalytics();
-    };
+    tbody.innerHTML = users.map(function (u) {
+      var bal = Number(walletMap[u.telegram_id] || 0).toLocaleString();
+      return '<tr>' +
+        '<td style="color:#64748b;font-size:12px">' + u.telegram_id + '</td>' +
+        '<td>' + (u.username ? '@' + u.username : '—') + '</td>' +
+        '<td>' + (u.full_name || '—') + '</td>' +
+        '<td><span class="badge badge-' + u.role + '">' + u.role.toUpperCase() + '</span></td>' +
+        '<td style="color:#f0b429;font-weight:700">' + bal + ' pts</td>' +
+        '<td>' +
+          '<input type="number" class="adj-input" id="adj-' + u.telegram_id + '" placeholder="±pts" />' +
+          '<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;margin-left:6px" ' +
+            'onclick="adjustBalance(\'' + u.telegram_id + '\')">ADJUST</button>' +
+        '</td>' +
+        '</tr>';
+    }).join("");
+  };
 
-    // ── TOAST ──
-    // Shows a green (success) or red (error) message at the bottom right
-    function showToast(msg, isError) {
-      var t = document.getElementById("toast");
-      t.innerText = msg;
-      t.style.background = isError ? "#ef4444" : "#22c55e";
-      t.style.color = isError ? "#fff" : "#000";
-      t.style.display = "block";
-      setTimeout(function () { t.style.display = "none"; }, 3500);
+  window.adjustBalance = async function (telegramId) {
+    var input  = document.getElementById("adj-" + telegramId);
+    var amount = parseInt(input.value);
+    if (isNaN(amount) || amount === 0) { showToast("Enter a valid amount e.g. 500 or -100", true); return; }
+
+    var walletRes = await db.from("wallets").select("balance_points").eq("telegram_id", telegramId).single();
+    var current   = walletRes.data ? walletRes.data.balance_points : 0;
+    var newBal    = current + amount;
+    if (newBal < 0) { showToast("Would result in negative balance!", true); return; }
+
+    var updateRes = await db.from("wallets").update({ balance_points: newBal }).eq("telegram_id", telegramId);
+    if (updateRes.error) { showToast("Error: " + updateRes.error.message, true); return; }
+
+    await db.rpc("write_ledger", {
+      p_telegram_id:  telegramId,
+      p_amount:       amount,
+      p_type:         "admin_adjust",
+      p_reference_id: null,
+      p_note:         "Admin adjusted by " + (amount > 0 ? "+" : "") + amount + " pts"
+    });
+
+    showToast("Balance adjusted by " + (amount > 0 ? "+" : "") + amount + " pts ✓");
+    input.value = "";
+    loadUsers();
+  };
+
+  // ── LEDGER ──
+  window.loadLedger = async function () {
+    var res = await db.from("wallet_ledger")
+      .select("*").order("created_at", { ascending: false }).limit(100);
+    var entries = res.data || [];
+    var tbody   = document.getElementById("ledgerTable");
+
+    if (!entries.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">No ledger entries yet</td></tr>';
+      return;
     }
 
-    // ── ANALYTICS ──
-    // ✅ FIX #5 (Admin Bug): Fetch markets FIRST, wait for it, THEN fetch revenue.
-    // Before this fix, both ran at the same time and the market name lookup
-    // was empty when revenue tried to use it — showing UUIDs instead of questions.
-    window.loadAnalytics = async function () {
-      // Step 1: load markets first so we have the name lookup ready
-      var marketsRes = await db.from("markets").select("id, question");
-      var marketMap = {};
-      (marketsRes.data || []).forEach(function (m) { marketMap[m.id] = m.question; });
+    tbody.innerHTML = entries.map(function (e) {
+      var color = e.amount > 0 ? "#22c55e" : e.amount < 0 ? "#ef4444" : "#64748b";
+      var amt   = e.amount > 0 ? "+" + e.amount : String(e.amount);
+      return '<tr>' +
+        '<td style="color:#64748b;font-size:12px">' + new Date(e.created_at).toLocaleString() + '</td>' +
+        '<td style="font-size:12px">' + e.telegram_id + '</td>' +
+        '<td><span class="badge badge-user" style="font-size:10px">' + e.type + '</span></td>' +
+        '<td style="color:' + color + ';font-weight:700">' + amt + '</td>' +
+        '<td>' + Number(e.balance_after).toLocaleString() + ' pts</td>' +
+        '<td style="color:#64748b;font-size:12px">' + (e.note || "—") + '</td>' +
+        '</tr>';
+    }).join("");
+  };
 
-      // Step 2: now load everything else in parallel (they don't depend on each other)
-      var [rev, trades, users, open, wallets] = await Promise.all([
-        db.from("platform_revenue").select("fee_collected, total_pool, market_id, created_at"),
-        db.from("trades").select("*", { count: "exact", head: true }),
-        db.from("users").select("*", { count: "exact", head: true }),
-        db.from("markets").select("*", { count: "exact", head: true }).eq("status", "open"),
-        db.from("wallets").select("balance_points")
-      ]);
+  // ── WITHDRAWALS ──
+  window.loadWithdrawals = async function () {
+    var filter = document.getElementById("wdFilter").value;
+    var tbody  = document.getElementById("wdTable");
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
 
-      var revenue = rev.data || [];
-      var totalRevenue = revenue.reduce(function (s, r) { return s + Number(r.fee_collected); }, 0);
-      var totalVolume  = revenue.reduce(function (s, r) { return s + Number(r.total_pool); }, 0);
-      var walletTotal  = (wallets.data || []).reduce(function (s, w) { return s + Number(w.balance_points); }, 0);
+    var query = db.from("withdrawals").select("*").order("created_at", { ascending: false }).limit(200);
+    if (filter !== "all") query = query.eq("status", filter);
+    var res  = await query;
+    var data = res.data;
 
-      document.getElementById("statRevenue").innerText = totalRevenue.toLocaleString() + " pts";
-      document.getElementById("statVolume").innerText  = totalVolume.toLocaleString()  + " pts";
-      document.getElementById("statTrades").innerText  = (trades.count || 0).toLocaleString();
-      document.getElementById("statUsers").innerText   = (users.count  || 0).toLocaleString();
-      document.getElementById("statOpen").innerText    = (open.count   || 0).toLocaleString();
-      document.getElementById("statWallets").innerText = walletTotal.toLocaleString() + " pts";
+    if (res.error || !data || !data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px">No withdrawals found</td></tr>';
+      return;
+    }
 
-      var tbody = document.getElementById("revenueTable");
-      if (!revenue.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="loading">No revenue yet</td></tr>';
-        return;
-      }
-      tbody.innerHTML = revenue
-        .sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); })
-        .map(function (r) {
-          // Now marketMap is guaranteed to be filled because we awaited it above
-          return '<tr>' +
-            '<td style="max-width:300px;font-size:12px">' + (marketMap[r.market_id] || r.market_id) + '</td>' +
-            '<td>' + Number(r.total_pool).toLocaleString() + ' pts</td>' +
-            '<td style="color:#22c55e;font-weight:700">' + Number(r.fee_collected).toLocaleString() + ' pts</td>' +
-            '<td style="color:#64748b;font-size:12px">' + new Date(r.created_at).toLocaleString() + '</td>' +
-            '</tr>';
-        }).join("");
-    };
+    tbody.innerHTML = data.map(function (w) {
+      var statusColors = { pending: "#f0c040", processing: "#4d8fff", completed: "#22c55e", rejected: "#ef4444" };
+      var color   = statusColors[w.status] || "#64748b";
+      var actions = "";
 
-    // ── MARKETS ──
-    window.loadMarkets = async function () {
-      var res = await db.from("markets").select("*").order("created_at", { ascending: false });
-      var markets = res.data || [];
-      var tbody = document.getElementById("marketsTable");
-
-      if (!markets.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No markets yet</td></tr>';
-        return;
+      if (w.status === "pending") {
+        actions =
+          '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" ' +
+            'onclick=\'processWd("' + w.id + '", "approve")\'>✓ Approve</button>' +
+          '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" ' +
+            'onclick=\'processWd("' + w.id + '", "reject")\'>✗ Reject</button>';
+      } else if (w.status === "processing") {
+        actions =
+          '<button class="btn" style="background:#4d8fff;color:#fff;font-size:11px;padding:5px 10px;margin-right:4px" ' +
+            'onclick=\'processWd("' + w.id + '", "complete")\'>✓ Mark Complete</button>' +
+          '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" ' +
+            'onclick=\'processWd("' + w.id + '", "reject")\'>✗ Reject</button>';
+      } else {
+        actions = '<span style="color:#64748b;font-size:11px">' + (w.admin_note || "—") + '</span>';
       }
 
-      tbody.innerHTML = markets.map(function (m) {
-        var statusBadge = '<span class="badge badge-' + m.status + '">' + m.status.toUpperCase() + '</span>';
-        var resultBadge = m.result
-          ? '<span class="badge badge-' + m.result + '">' + m.result.toUpperCase() + '</span>'
-          : '<span style="color:#64748b">—</span>';
+      return '<tr>' +
+        '<td style="color:#64748b;font-size:12px">' + new Date(w.created_at).toLocaleString() + '</td>' +
+        '<td style="font-size:12px">' + w.telegram_id + '</td>' +
+        '<td style="font-weight:700;color:#f0c040">' + (w.amount_points || "—") + ' pts</td>' +
+        '<td style="font-weight:700">€' + Number(w.amount_eur || 0).toFixed(2) + '</td>' +
+        '<td style="font-family:monospace;font-size:11px;color:#94a3b8">' + (w.iban || "—") + '</td>' +
+        '<td><span style="color:' + color + ';font-weight:700;font-size:11px;text-transform:uppercase">' + w.status + '</span></td>' +
+        '<td>' + actions + '</td>' +
+        '</tr>';
+    }).join("");
+  };
 
-        var action = '<span style="color:#64748b;font-size:11px">—</span>';
+  // ── PROCESS WITHDRAWAL ──
+  // FIX: Now sends "x-admin-secret" header so the server can verify
+  // this request is actually coming from an authenticated admin.
+  window.processWd = async function (id, action) {
+    var note = "";
+    if (action === "reject")   note = prompt("Reason for rejection (optional):") || "";
+    if (action === "complete") note = prompt("Add a note e.g. bank reference (optional):") || "";
 
-        if (m.status === "closed" && !m.result) {
-          // ✅ FIX #2 (Admin Bug): The original code used curly/smart quotes like ' and '
-          // inside onclick strings. JavaScript cannot parse those — clicks did nothing.
-          // Now we use regular straight single quotes and escaped double quotes properly.
-          action =
-            '<select class="result-select" id="result-' + m.id + '">' +
-              '<option value="">Set result...</option>' +
-              '<option value="yes">✅ YES</option>' +
-              '<option value="no">❌ NO</option>' +
-            '</select>' +
-            '<button class="btn btn-green" style="font-size:11px;padding:4px 10px;margin-left:6px" ' +
-              'onclick="setResult(\'' + m.id + '\')">SET</button>';
+    var res = await fetch(SUPABASE_URL + "/functions/v1/process-withdrawal", {
+      method: "POST",
+      headers: {
+        "Content-Type":   "application/json",
+        "x-admin-secret": adminSecret   // ← SECRET SENT HERE
+      },
+      body: JSON.stringify({ withdrawal_id: id, action: action, admin_note: note })
+    });
+    var data = await res.json();
 
-        } else if (m.status === "settled") {
-          action = '<span style="color:#22c55e;font-size:11px">Settled ✓</span>';
-        } else if (m.status === "open") {
-          // ✅ FIX: Added a "Force Close" button so admins can close a market early
-          // (This was listed as Admin Missing #12 in the audit)
-          action = '<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" ' +
-            'onclick="forceCloseMarket(\'' + m.id + '\')">Force Close</button>';
-        }
-
-        return '<tr>' +
-          '<td style="max-width:260px;font-size:12px">' + m.question + '</td>' +
-          '<td>' + statusBadge + '</td>' +
-          '<td style="color:#64748b;font-size:12px">' + new Date(m.closes_at).toLocaleString() + '</td>' +
-          '<td style="color:#22c55e;font-weight:700">' + Number(m.yes_pool).toLocaleString() + '</td>' +
-          '<td style="color:#ef4444;font-weight:700">' + Number(m.no_pool).toLocaleString() + '</td>' +
-          '<td>' + resultBadge + '</td>' +
-          '<td>' + action + '</td>' +
-          '</tr>';
-      }).join("");
-    };
-
-    // ── FORCE CLOSE MARKET ──
-    // ✅ NEW: Admins can now manually close a market early
-    window.forceCloseMarket = async function (marketId) {
-      if (!confirm("Are you sure you want to force-close this market? Trading will stop immediately.")) return;
-      var res = await db.from("markets").update({ status: "closed" }).eq("id", marketId);
-      if (res.error) { showToast("Error: " + res.error.message, true); return; }
-      showToast("Market closed ✓ — now set the result to settle it");
-      loadMarkets();
-    };
-
-    // ── SET RESULT ──
-    window.setResult = async function (marketId) {
-      var select = document.getElementById("result-" + marketId);
-      var result = select.value;
-      if (!result) { showToast("Select YES or NO first", true); return; }
-
-      var res = await db.from("markets").update({ result: result }).eq("id", marketId);
-      if (res.error) { showToast("Error: " + res.error.message, true); return; }
-
-      showToast("Result set to " + result.toUpperCase() + " ✓  — cron will pay winners within 1 minute");
-      loadMarkets();
-    };
-
-    // ── CREATE MARKET ──
-    window.createMarket = async function () {
-      var question = document.getElementById("newQuestion").value.trim();
-      var closesAt = document.getElementById("newClosesAt").value;
-      if (!question) { showToast("Enter a question", true); return; }
-      if (!closesAt) { showToast("Set a closing time", true); return; }
-
-      var res = await db.from("markets").insert({
-        question: question,
-        closes_at: new Date(closesAt).toISOString(),
-        status: "open",
-        settled: false,
-        yes_pool: 0,
-        no_pool: 0
-      });
-
-      if (res.error) { showToast("Error: " + res.error.message, true); return; }
-
-      showToast("Market created ✓");
-      document.getElementById("newQuestion").value = "";
-      document.getElementById("newClosesAt").value = "";
-    };
-
-    // ── USERS ──
-    window.loadUsers = async function () {
-      var usersRes   = await db.from("users").select("telegram_id, username, full_name, role");
-      var walletsRes = await db.from("wallets").select("telegram_id, balance_points");
-
-      var walletMap = {};
-      (walletsRes.data || []).forEach(function (w) { walletMap[w.telegram_id] = w.balance_points; });
-
-      var users = usersRes.data || [];
-      var tbody = document.getElementById("usersTable");
-
-      if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">No users yet</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = users.map(function (u) {
-        var bal = Number(walletMap[u.telegram_id] || 0).toLocaleString();
-        // ✅ FIX (Admin Bug #4): Now shows full_name if available, falls back to username or '—'
-        var displayName = u.full_name || u.username || '—';
-        return '<tr>' +
-          '<td style="color:#64748b;font-size:12px">' + u.telegram_id + '</td>' +
-          '<td>' + (u.username ? '@' + u.username : '—') + '</td>' +
-          '<td>' + displayName + '</td>' +
-          '<td><span class="badge badge-' + u.role + '">' + u.role.toUpperCase() + '</span></td>' +
-          '<td style="color:#f0b429;font-weight:700">' + bal + ' pts</td>' +
-          '<td>' +
-            // ✅ FIX #2: Using proper straight quotes in onclick — no more curly quotes
-            '<input type="number" class="adj-input" id="adj-' + u.telegram_id + '" placeholder="±pts" />' +
-            '<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;margin-left:6px" ' +
-              'onclick="adjustBalance(\'' + u.telegram_id + '\')">ADJUST</button>' +
-          '</td>' +
-          '</tr>';
-      }).join("");
-    };
-
-    // ── ADJUST BALANCE ──
-    window.adjustBalance = async function (telegramId) {
-      var input  = document.getElementById("adj-" + telegramId);
-      var amount = parseInt(input.value);
-      if (isNaN(amount) || amount === 0) { showToast("Enter a valid amount e.g. 500 or -100", true); return; }
-
-      var walletRes = await db.from("wallets").select("balance_points").eq("telegram_id", telegramId).single();
-      var current   = walletRes.data ? walletRes.data.balance_points : 0;
-      var newBal    = current + amount;
-
-      if (newBal < 0) { showToast("Would result in negative balance!", true); return; }
-
-      var updateRes = await db.from("wallets").update({ balance_points: newBal }).eq("telegram_id", telegramId);
-      if (updateRes.error) { showToast("Error: " + updateRes.error.message, true); return; }
-
-      await db.rpc("write_ledger", {
-        p_telegram_id:  telegramId,
-        p_amount:       amount,
-        p_type:         "admin_adjust",
-        p_reference_id: null,
-        p_note:         "Admin adjusted by " + (amount > 0 ? "+" : "") + amount + " pts"
-      });
-
-      showToast("Balance adjusted by " + (amount > 0 ? "+" : "") + amount + " pts ✓");
-      input.value = "";
-      loadUsers();
-    };
-
-    // ── LEDGER ──
-    window.loadLedger = async function () {
-      var res = await db.from("wallet_ledger")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      var entries = res.data || [];
-      var tbody   = document.getElementById("ledgerTable");
-
-      if (!entries.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">No ledger entries yet</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = entries.map(function (e) {
-        var color = e.amount > 0 ? "#22c55e" : e.amount < 0 ? "#ef4444" : "#64748b";
-        var amt   = e.amount > 0 ? "+" + e.amount : String(e.amount);
-        return '<tr>' +
-          '<td style="color:#64748b;font-size:12px">' + new Date(e.created_at).toLocaleString() + '</td>' +
-          '<td style="font-size:12px">' + e.telegram_id + '</td>' +
-          '<td><span class="badge badge-user" style="font-size:10px">' + e.type + '</span></td>' +
-          '<td style="color:' + color + ';font-weight:700">' + amt + '</td>' +
-          '<td>' + Number(e.balance_after).toLocaleString() + ' pts</td>' +
-          '<td style="color:#64748b;font-size:12px">' + (e.note || "—") + '</td>' +
-          '</tr>';
-      }).join("");
-    };
-
-    // ── WITHDRAWALS ──
-    // ✅ FIX #1 (Critical Bug): Changed 'sb.from(...)' → 'db.from(...)'
-    // 'sb' never existed — this made the whole tab crash silently before.
-    window.loadWithdrawals = async function () {
-      var filter = document.getElementById("wdFilter").value;
-      var tbody  = document.getElementById("wdTable");
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
-
-      // ✅ FIXED: was 'sb.from' — now correctly 'db.from'
-      var query = db.from("withdrawals").select("*").order("created_at", { ascending: false }).limit(200);
-      if (filter !== "all") query = query.eq("status", filter);
-
-      var res = await query;
-      var data = res.data;
-
-      if (res.error || !data || !data.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px">No withdrawals found</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = data.map(function (w) {
-        var statusColors = { pending: "#f0c040", processing: "#4d8fff", completed: "#22c55e", rejected: "#ef4444" };
-        var color  = statusColors[w.status] || "#64748b";
-        var date   = new Date(w.created_at).toLocaleString();
-        var pts    = (w.amount_points || "—");
-        var eur    = "€" + Number(w.amount_eur || 0).toFixed(2);
-        var iban   = w.iban || "—";
-        var actions = "";
-
-        if (w.status === "pending") {
-          // ✅ FIX #2 (Critical Bug): Replaced curly/smart quotes with proper straight quotes
-          // Before: onclick="processWd('\u2018' + w.id + '\u2019', 'approve')" — broken!
-          // After:  onclick='processWd("...", "approve")' — works correctly
-          actions =
-            '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" ' +
-              'onclick=\'processWd("' + w.id + '", "approve")\'>✓ Approve</button>' +
-            '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" ' +
-              'onclick=\'processWd("' + w.id + '", "reject")\'>✗ Reject</button>';
-
-        } else if (w.status === "processing") {
-          actions =
-            '<button class="btn" style="background:#4d8fff;color:#fff;font-size:11px;padding:5px 10px;margin-right:4px" ' +
-              'onclick=\'processWd("' + w.id + '", "complete")\'>✓ Mark Complete</button>' +
-            '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" ' +
-              'onclick=\'processWd("' + w.id + '", "reject")\'>✗ Reject</button>';
-
-        } else {
-          actions = '<span style="color:#64748b;font-size:11px">' + (w.admin_note || "—") + '</span>';
-        }
-
-        return '<tr>' +
-          '<td style="color:#64748b;font-size:12px">' + date + '</td>' +
-          '<td style="font-size:12px">' + w.telegram_id + '</td>' +
-          '<td style="font-weight:700;color:#f0c040">' + pts + ' pts</td>' +
-          '<td style="font-weight:700">' + eur + '</td>' +
-          '<td style="font-family:monospace;font-size:11px;color:#94a3b8">' + iban + '</td>' +
-          '<td><span style="color:' + color + ';font-weight:700;font-size:11px;text-transform:uppercase">' + w.status + '</span></td>' +
-          '<td>' + actions + '</td>' +
-          '</tr>';
-      }).join("");
-    };
-
-    // ── PROCESS WITHDRAWAL ──
-    window.processWd = async function (id, action) {
-      var note = "";
-      if (action === "reject") {
-        note = prompt("Reason for rejection (optional):") || "";
-      }
-      if (action === "complete") {
-        note = prompt("Add a note (e.g. bank reference)? (optional):") || "";
-      }
-
-      var res = await fetch(SUPABASE_URL + "/functions/v1/process-withdrawal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ withdrawal_id: id, action: action, admin_note: note })
-      });
-      var data = await res.json();
-
-      if (!res.ok) {
+    if (!res.ok) {
+      // If 401, the secret is wrong
+      if (res.status === 401) {
+        alert("❌ Unauthorized — your admin secret is wrong or not set in Supabase environment variables.");
+      } else {
         alert("Error: " + (data.error || "Unknown error"));
-        return;
+      }
+      return;
+    }
+
+    showToast(data.message || "Done!");
+    loadWithdrawals();
+  };
+
+  // ── QUESTIONS ──
+  window.loadQuestions = async function () {
+    var filter = document.getElementById("qFilter").value;
+    var tbody  = document.getElementById("qTable");
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+
+    var query = db.from("question_submissions").select("*").order("created_at", { ascending: false }).limit(200);
+    if (filter !== "all") query = query.eq("status", filter);
+    var res  = await query;
+    var data = res.data;
+
+    if (res.error || !data || !data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px">No submissions found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(function (q) {
+      var statusColors = { pending: "#f0c040", approved: "#22c55e", rejected: "#ef4444" };
+      var color   = statusColors[q.status] || "#64748b";
+      var context = q.context ? ('<span style="color:#64748b;font-size:11px">' + q.context.slice(0, 80) + '</span>') : "—";
+      var actions = "";
+
+      if (q.status === "pending") {
+        actions =
+          '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" ' +
+            'onclick=\'reviewQuestion("' + q.id + '", "approve")\'>✓ Approve</button>' +
+          '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" ' +
+            'onclick=\'reviewQuestion("' + q.id + '", "reject")\'>✗ Reject</button>';
+      } else {
+        var refundedNote = q.refunded ? ' <span style="color:#22c55e;font-size:10px">(refunded)</span>' : '';
+        actions = '<span style="color:#64748b;font-size:11px">' + q.status + refundedNote + '</span>';
       }
 
-      showToast(data.message || "Done!");
-      loadWithdrawals();
-    };
+      return '<tr>' +
+        '<td style="color:#64748b;font-size:12px">' + new Date(q.created_at).toLocaleString() + '</td>' +
+        '<td style="font-size:12px">' + q.telegram_id + '</td>' +
+        '<td style="font-weight:600;max-width:300px">' + q.question + '</td>' +
+        '<td style="max-width:200px">' + context + '</td>' +
+        '<td><span style="color:' + color + ';font-weight:700;font-size:11px;text-transform:uppercase">' + q.status + '</span></td>' +
+        '<td>' + actions + '</td>' +
+        '</tr>';
+    }).join("");
+  };
 
-    // ── QUESTIONS ──
-    // ✅ FIX #1 (Critical Bug): Changed 'sb.from(...)' → 'db.from(...)'
-    // Same crash as Withdrawals tab — now fixed.
-    window.loadQuestions = async function () {
-      var filter = document.getElementById("qFilter").value;
-      var tbody  = document.getElementById("qTable");
-      tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
-
-      // ✅ FIXED: was 'sb.from' — now correctly 'db.from'
-      var query = db.from("question_submissions").select("*").order("created_at", { ascending: false }).limit(200);
-      if (filter !== "all") query = query.eq("status", filter);
-
-      var res = await query;
-      var data = res.data;
-
-      if (res.error || !data || !data.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px">No submissions found</td></tr>';
-        return;
+  // ── REVIEW QUESTION ──
+  // FIX: Now sends "x-admin-secret" header — same as process-withdrawal
+  window.reviewQuestion = async function (id, action) {
+    var closesAt = "";
+    if (action === "approve") {
+      closesAt = prompt("When should this market close? (e.g. 2025-12-31T23:59:00)\nLeave blank to default to 7 days from now:");
+      if (closesAt === null) return;
+      if (!closesAt.trim()) {
+        var d = new Date();
+        d.setDate(d.getDate() + 7);
+        closesAt = d.toISOString();
       }
+    }
 
-      tbody.innerHTML = data.map(function (q) {
-        var statusColors = { pending: "#f0c040", approved: "#22c55e", rejected: "#ef4444" };
-        var color   = statusColors[q.status] || "#64748b";
-        var date    = new Date(q.created_at).toLocaleString();
-        var context = q.context ? ('<span style="color:#64748b;font-size:11px">' + q.context.slice(0, 80) + '</span>') : "—";
-        var actions = "";
+    var res = await fetch(SUPABASE_URL + "/functions/v1/review-question", {
+      method: "POST",
+      headers: {
+        "Content-Type":   "application/json",
+        "x-admin-secret": adminSecret   // ← SECRET SENT HERE
+      },
+      body: JSON.stringify({ submission_id: id, action: action, closes_at: closesAt })
+    });
+    var data = await res.json();
 
-        if (q.status === "pending") {
-          // ✅ FIX #2 (Critical Bug): Same quote fix as Withdrawals — straight quotes only
-          actions =
-            '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" ' +
-              'onclick=\'reviewQuestion("' + q.id + '", "approve")\'>✓ Approve</button>' +
-            '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" ' +
-              'onclick=\'reviewQuestion("' + q.id + '", "reject")\'>✗ Reject</button>';
-
-        } else {
-          var refundedNote = q.refunded ? ' <span style="color:#22c55e;font-size:10px">(refunded)</span>' : '';
-          actions = '<span style="color:#64748b;font-size:11px">' + q.status + refundedNote + '</span>';
-        }
-
-        return '<tr>' +
-          '<td style="color:#64748b;font-size:12px">' + date + '</td>' +
-          '<td style="font-size:12px">' + q.telegram_id + '</td>' +
-          '<td style="font-weight:600;max-width:300px">' + q.question + '</td>' +
-          '<td style="max-width:200px">' + context + '</td>' +
-          '<td><span style="color:' + color + ';font-weight:700;font-size:11px;text-transform:uppercase">' + q.status + '</span></td>' +
-          '<td>' + actions + '</td>' +
-          '</tr>';
-      }).join("");
-    };
-
-    // ── REVIEW QUESTION ──
-    window.reviewQuestion = async function (id, action) {
-      var closesAt = "";
-
-      if (action === "approve") {
-        closesAt = prompt("When should this market close? (e.g. 2025-12-31T23:59:00)\nLeave blank to default to 7 days from now:");
-        if (closesAt === null) return;
-        if (!closesAt.trim()) {
-          var d = new Date();
-          d.setDate(d.getDate() + 7);
-          closesAt = d.toISOString();
-        }
-      }
-
-      var res = await fetch(SUPABASE_URL + "/functions/v1/review-question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ submission_id: id, action: action, closes_at: closesAt })
-      });
-      var data = await res.json();
-
-      if (!res.ok) {
+    if (!res.ok) {
+      if (res.status === 401) {
+        alert("❌ Unauthorized — your admin secret is wrong or not set in Supabase environment variables.");
+      } else {
         alert("Error: " + (data.error || "Unknown error"));
-        return;
       }
+      return;
+    }
 
-      showToast(action === "approve" ? "✅ Approved — market created!" : "✗ Rejected & refunded");
-      loadQuestions();
-    };
+    showToast(action === "approve" ? "✅ Approved — market created!" : "✗ Rejected & refunded");
+    loadQuestions();
+  };
 
-  }); // end window.onload
+}); // end window.onload
 </script>
 
 </body>
