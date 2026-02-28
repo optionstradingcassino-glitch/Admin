@@ -155,7 +155,8 @@
         <div class="stat-card"><div class="label">Registered Users</div><div class="value" id="statUsers">—</div><div class="sub">accounts</div></div>
         <div class="stat-card"><div class="label">Open Markets</div><div class="value" id="statOpen">—</div><div class="sub">live now</div></div>
         <div class="stat-card"><div class="label">Points in Wallets</div><div class="value" id="statWallets">—</div><div class="sub">circulating</div></div>
-        <div class="stat-card"><div class="label">Membership Revenue</div><div class="value" id="statMemRev">—</div><div class="sub">active subscriptions</div></div>
+        <div class="stat-card"><div class="label">Membership Revenue</div><div class="value" id="statMemRev">—</div><div class="sub">all subscriptions ever</div></div>
+        <div class="stat-card"><div class="label">Total Deposits</div><div class="value" id="statDeposits">—</div><div class="sub">Stripe payments ever</div></div>
       </div>
       <div class="card">
         <div class="card-header"><h3>Revenue per Market</h3></div>
@@ -351,14 +352,17 @@ window.addEventListener("load", function () {
     var marketMap={};
     (mr.data||[]).forEach(function(m){marketMap[m.id]=m.question;});
 
-    var[rev,trades,users,open,wallets,memberships,tiers]=await Promise.all([
+    // Load everything at once for speed
+    var[rev,trades,users,open,wallets,memberships,tiers,payments]=await Promise.all([
       db.from("platform_revenue").select("fee_collected,total_pool,market_id,created_at"),
       db.from("trades").select("*",{count:"exact",head:true}),
-      db.from("users_admin").select("*",{count:"exact",head:true}),  // fixed: was "users"
+      db.from("users_admin").select("*",{count:"exact",head:true}),
       db.from("markets").select("*",{count:"exact",head:true}).eq("status","open"),
       db.from("wallets").select("balance_points"),
+      // Get ALL memberships (active + cancelled) so history shows correctly
       db.from("user_memberships").select("telegram_id,tier_id,status,started_at"),
-      db.from("membership_tiers").select("id,name,price_eur_cents")
+      db.from("membership_tiers").select("id,name,price_eur_cents,bonus_points"),
+      db.from("payments").select("amount_eur,points_added")
     ]);
 
     var revenue=(rev.data||[]);
@@ -366,28 +370,31 @@ window.addEventListener("load", function () {
     var totalVol=revenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
     var wTotal=(wallets.data||[]).reduce(function(s,w){return s+Number(w.balance_points);},0);
 
-    // Calculate membership revenue: sum price of all active memberships
+    // Total deposits ever made (all Stripe payments)
+    var totalDepEur=(payments.data||[]).reduce(function(s,p){return s+Number(p.amount_eur);},0);
+    var totalDepPts=(payments.data||[]).reduce(function(s,p){return s+Number(p.points_added);},0);
+
+    // Membership revenue — count ALL memberships (each one was a real payment)
     var tierPriceMap={};
-    (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=t.price_eur_cents;});
+    (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=(t.price_eur_cents||0)/100;});
     var memRevEur=(memberships.data||[])
-      .filter(function(m){return m.status==="active";})
-      .reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0)/100;},0);
+      .reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0);},0);
+    var memRevPts=Math.round(memRevEur*10);
+    var activeMem=(memberships.data||[]).filter(function(m){return m.status==="active";}).length;
 
-    // €1 = 10 pts
-    var feeEur = (totalFee / 10).toFixed(2);
-    var memRevPts = Math.round(memRevEur * 10);
+    var feeEur=(totalFee/10).toFixed(2);
 
-    document.getElementById("statRevenue").innerText = totalFee.toLocaleString()+" pts (€"+feeEur+")";
-    document.getElementById("statVolume").innerText  = totalVol.toLocaleString()+" pts";
-    document.getElementById("statTrades").innerText  = (trades.count||0).toLocaleString();
-    document.getElementById("statUsers").innerText   = (users.count||0).toLocaleString();
-    document.getElementById("statOpen").innerText    = (open.count||0).toLocaleString();
-    document.getElementById("statWallets").innerText = wTotal.toLocaleString()+" pts";
-    // Membership revenue stat card
-    document.getElementById("statMemRev").innerText  = "€"+memRevEur.toFixed(2)+" ("+memRevPts+" pts)";
+    document.getElementById("statRevenue").innerText=totalFee.toLocaleString()+" pts (€"+feeEur+")";
+    document.getElementById("statVolume").innerText=totalVol.toLocaleString()+" pts";
+    document.getElementById("statTrades").innerText=(trades.count||0).toLocaleString();
+    document.getElementById("statUsers").innerText=(users.count||0).toLocaleString();
+    document.getElementById("statOpen").innerText=(open.count||0).toLocaleString();
+    document.getElementById("statWallets").innerText=wTotal.toLocaleString()+" pts";
+    document.getElementById("statMemRev").innerText="€"+memRevEur.toFixed(2)+" · "+activeMem+" active";
+    document.getElementById("statDeposits").innerText="€"+totalDepEur.toFixed(2)+" ("+totalDepPts.toLocaleString()+" pts)";
 
     var tbody=document.getElementById("revenueTable");
-    if(!revenue.length){tbody.innerHTML='<tr><td colspan="4" class="loading">No revenue yet</td></tr>';return;}
+    if(!revenue.length){tbody.innerHTML='<tr><td colspan="4" class="loading">No trading revenue yet</td></tr>';return;}
     tbody.innerHTML=revenue.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);}).map(function(r){
       var feeEurRow=(Number(r.fee_collected)/10).toFixed(2);
       return '<tr><td style="max-width:300px;font-size:12px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
