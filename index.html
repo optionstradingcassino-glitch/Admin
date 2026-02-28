@@ -155,6 +155,7 @@
         <div class="stat-card"><div class="label">Registered Users</div><div class="value" id="statUsers">—</div><div class="sub">accounts</div></div>
         <div class="stat-card"><div class="label">Open Markets</div><div class="value" id="statOpen">—</div><div class="sub">live now</div></div>
         <div class="stat-card"><div class="label">Points in Wallets</div><div class="value" id="statWallets">—</div><div class="sub">circulating</div></div>
+        <div class="stat-card"><div class="label">Membership Revenue</div><div class="value" id="statMemRev">—</div><div class="sub">active subscriptions</div></div>
       </div>
       <div class="card">
         <div class="card-header"><h3>Revenue per Market</h3></div>
@@ -349,29 +350,49 @@ window.addEventListener("load", function () {
     var mr = await db.from("markets").select("id,question");
     var marketMap={};
     (mr.data||[]).forEach(function(m){marketMap[m.id]=m.question;});
-    var[rev,trades,users,open,wallets]=await Promise.all([
+
+    var[rev,trades,users,open,wallets,memberships,tiers]=await Promise.all([
       db.from("platform_revenue").select("fee_collected,total_pool,market_id,created_at"),
       db.from("trades").select("*",{count:"exact",head:true}),
-      db.from("users_admin").select("*",{count:"exact",head:true}),
+      db.from("users_admin").select("*",{count:"exact",head:true}),  // fixed: was "users"
       db.from("markets").select("*",{count:"exact",head:true}).eq("status","open"),
-      db.from("wallets").select("balance_points")
+      db.from("wallets").select("balance_points"),
+      db.from("user_memberships").select("telegram_id,tier_id,status,started_at"),
+      db.from("membership_tiers").select("id,name,price_eur_cents")
     ]);
+
     var revenue=(rev.data||[]);
-    var totalRev=revenue.reduce(function(s,r){return s+Number(r.fee_collected);},0);
+    var totalFee=revenue.reduce(function(s,r){return s+Number(r.fee_collected);},0);
     var totalVol=revenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
     var wTotal=(wallets.data||[]).reduce(function(s,w){return s+Number(w.balance_points);},0);
-    document.getElementById("statRevenue").innerText=totalRev.toLocaleString()+" pts";
-    document.getElementById("statVolume").innerText=totalVol.toLocaleString()+" pts";
-    document.getElementById("statTrades").innerText=(trades.count||0).toLocaleString();
-    document.getElementById("statUsers").innerText=(users.count||0).toLocaleString();
-    document.getElementById("statOpen").innerText=(open.count||0).toLocaleString();
-    document.getElementById("statWallets").innerText=wTotal.toLocaleString()+" pts";
+
+    // Calculate membership revenue: sum price of all active memberships
+    var tierPriceMap={};
+    (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=t.price_eur_cents;});
+    var memRevEur=(memberships.data||[])
+      .filter(function(m){return m.status==="active";})
+      .reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0)/100;},0);
+
+    // €1 = 10 pts
+    var feeEur = (totalFee / 10).toFixed(2);
+    var memRevPts = Math.round(memRevEur * 10);
+
+    document.getElementById("statRevenue").innerText = totalFee.toLocaleString()+" pts (€"+feeEur+")";
+    document.getElementById("statVolume").innerText  = totalVol.toLocaleString()+" pts";
+    document.getElementById("statTrades").innerText  = (trades.count||0).toLocaleString();
+    document.getElementById("statUsers").innerText   = (users.count||0).toLocaleString();
+    document.getElementById("statOpen").innerText    = (open.count||0).toLocaleString();
+    document.getElementById("statWallets").innerText = wTotal.toLocaleString()+" pts";
+    // Membership revenue stat card
+    document.getElementById("statMemRev").innerText  = "€"+memRevEur.toFixed(2)+" ("+memRevPts+" pts)";
+
     var tbody=document.getElementById("revenueTable");
     if(!revenue.length){tbody.innerHTML='<tr><td colspan="4" class="loading">No revenue yet</td></tr>';return;}
     tbody.innerHTML=revenue.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);}).map(function(r){
+      var feeEurRow=(Number(r.fee_collected)/10).toFixed(2);
       return '<tr><td style="max-width:300px;font-size:12px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
         '<td>'+Number(r.total_pool).toLocaleString()+' pts</td>'+
-        '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts</td>'+
+        '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts <span style="color:#64748b;font-size:11px">(€'+feeEurRow+')</span></td>'+
         '<td style="color:#64748b;font-size:12px">'+new Date(r.created_at).toLocaleString()+'</td></tr>';
     }).join("");
   };
@@ -436,11 +457,8 @@ window.addEventListener("load", function () {
   // ── USERS ──────────────────────────────────────────────────────────────────
   window.loadUsers = async function() {
     // Load users + wallets together
-    // "users_admin" is a clean view we created in the DB.
-    // The regular "users" table is actually a messy joined view mixing
-    // public.users + auth.users — it has duplicate column names which
-    // confuses the Supabase client and returns nothing.
-    // "users_admin" only has the columns we actually need, with no duplicates.
+    // "users_admin" is a clean view — the raw "users" table has duplicate
+    // column names (it merges public.users + auth.users) which breaks queries
     var[ur,wr]=await Promise.all([
       db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier"),
       db.from("wallets").select("telegram_id,balance_points")
@@ -629,14 +647,58 @@ window.addEventListener("load", function () {
 
   // ── LEDGER ─────────────────────────────────────────────────────────────────
   window.loadLedger=async function(){
-    var r=await db.from("wallet_ledger").select("*").order("created_at",{ascending:false}).limit(100);
-    var entries=r.data||[];
+    // Load wallet ledger AND membership purchases together
+    var[ledgerRes, memRes, tiersRes]=await Promise.all([
+      db.from("wallet_ledger").select("*").order("created_at",{ascending:false}).limit(100),
+      db.from("user_memberships").select("telegram_id,tier_id,status,started_at,created_at"),
+      db.from("membership_tiers").select("id,name,price_eur_cents,bonus_points")
+    ]);
+
+    var entries=ledgerRes.data||[];
     var tbody=document.getElementById("ledgerTable");
-    if(!entries.length){tbody.innerHTML='<tr><td colspan="6" class="loading">No entries yet</td></tr>';return;}
-    tbody.innerHTML=entries.map(function(e){
+
+    // Build tier name map
+    var tierMap={};
+    (tiersRes.data||[]).forEach(function(t){tierMap[t.id]=t;});
+
+    // Build membership rows — shown as revenue entries
+    var memRows=(memRes.data||[]).map(function(m){
+      var t=tierMap[m.tier_id]||{};
+      var priceEur=((t.price_eur_cents||0)/100).toFixed(2);
+      return {
+        _isMem:true,
+        created_at: m.started_at||m.created_at,
+        telegram_id: m.telegram_id,
+        type: "membership_purchase",
+        amount: "€"+priceEur,
+        balance_after: "—",
+        note: (t.name||"?")+" Plan · "+t.bonus_points+" bonus pts given"
+      };
+    });
+
+    if(!entries.length && !memRows.length){
+      tbody.innerHTML='<tr><td colspan="6" class="loading">No entries yet</td></tr>';return;
+    }
+
+    // Combine both lists and sort newest first
+    var allRows=memRows.concat(entries.map(function(e){return Object.assign({_isMem:false},e);}));
+    allRows.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);});
+
+    tbody.innerHTML=allRows.slice(0,150).map(function(e){
+      if(e._isMem){
+        // Membership row — shown in gold/accent color
+        return '<tr style="background:rgba(34,192,99,0.04)">'+
+          '<td style="color:#64748b;font-size:12px">'+new Date(e.created_at).toLocaleString()+'</td>'+
+          '<td style="font-size:12px">'+e.telegram_id+'</td>'+
+          '<td><span class="badge" style="background:rgba(34,192,99,.15);color:#22c063;font-size:10px">membership_purchase</span></td>'+
+          '<td style="color:#22c063;font-weight:700">'+e.amount+'</td>'+
+          '<td style="color:#64748b">'+e.balance_after+'</td>'+
+          '<td style="color:#64748b;font-size:12px">'+e.note+'</td></tr>';
+      }
       var c=e.amount>0?"#22c063":e.amount<0?"#ef4444":"#64748b";
       var a=e.amount>0?"+"+e.amount:String(e.amount);
-      return '<tr><td style="color:#64748b;font-size:12px">'+new Date(e.created_at).toLocaleString()+'</td>'+
+      return '<tr>'+
+        '<td style="color:#64748b;font-size:12px">'+new Date(e.created_at).toLocaleString()+'</td>'+
         '<td style="font-size:12px">'+e.telegram_id+'</td>'+
         '<td><span class="badge badge-user" style="font-size:10px">'+e.type+'</span></td>'+
         '<td style="color:'+c+';font-weight:700">'+a+'</td>'+
