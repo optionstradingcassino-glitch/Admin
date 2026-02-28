@@ -352,7 +352,7 @@ window.addEventListener("load", function () {
     var[rev,trades,users,open,wallets]=await Promise.all([
       db.from("platform_revenue").select("fee_collected,total_pool,market_id,created_at"),
       db.from("trades").select("*",{count:"exact",head:true}),
-      db.from("users").select("*",{count:"exact",head:true}),
+      db.from("users_admin").select("*",{count:"exact",head:true}),
       db.from("markets").select("*",{count:"exact",head:true}).eq("status","open"),
       db.from("wallets").select("balance_points")
     ]);
@@ -436,8 +436,13 @@ window.addEventListener("load", function () {
   // ── USERS ──────────────────────────────────────────────────────────────────
   window.loadUsers = async function() {
     // Load users + wallets together
+    // "users_admin" is a clean view we created in the DB.
+    // The regular "users" table is actually a messy joined view mixing
+    // public.users + auth.users — it has duplicate column names which
+    // confuses the Supabase client and returns nothing.
+    // "users_admin" only has the columns we actually need, with no duplicates.
     var[ur,wr]=await Promise.all([
-      db.from("users").select("telegram_id,username,full_name,email,role,membership_tier"),
+      db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier"),
       db.from("wallets").select("telegram_id,balance_points")
     ]);
     var wmap={};
