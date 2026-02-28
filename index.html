@@ -418,8 +418,17 @@ window.addEventListener("load", function () {
     var c=document.getElementById("newClosesAt").value;
     if(!q){showToast("Enter a question",true);return;}
     if(!c){showToast("Set closing time",true);return;}
-    var r=await db.from("markets").insert({question:q,closes_at:new Date(c).toISOString(),status:"open",settled:false,yes_pool:0,no_pool:0});
-    if(r.error){showToast("Error: "+r.error.message,true);return;}
+
+    // Direct DB insert is blocked by RLS policy.
+    // We call our edge function instead — it uses the SERVICE ROLE KEY
+    // which bypasses RLS. The edge function checks the admin secret first.
+    var res=await fetch(SUPABASE_URL+"/functions/v1/admin-create-market",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-admin-secret":adminSecret},
+      body:JSON.stringify({question:q,closes_at:new Date(c).toISOString()})
+    });
+    var data=await res.json();
+    if(!res.ok){showToast("Error: "+(data.error||"unknown"),true);return;}
     showToast("Market created!");
     document.getElementById("newQuestion").value=""; document.getElementById("newClosesAt").value="";
   };
