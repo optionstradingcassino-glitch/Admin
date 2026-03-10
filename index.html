@@ -4,32 +4,44 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cassino Trade — Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <!-- Same fonts as the mini app for consistency -->
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    @font-face {
+      font-family: 'Druk Wide';
+      src: url('https://liketekvzrazheolmfnj.supabase.co/storage/v1/object/public/Fonts/DrukWideBold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg:      #080c14;
-      --surface: #0e1520;
-      --border:  #1a2535;
+      --bg:      #06070b;
+      --surface: #0c0e15;
+      --border:  #1c2035;
       --accent:  #22c063;
       --accent2: #3b82f6;
       --green:   #22c55e;
-      --red:     #ef4444;
-      --text:    #e2e8f0;
-      --muted:   #64748b;
+      --red:     #ff3d5a;
+      --text:    #dde0f0;
+      --muted:   #485070;
+      --font-heading: 'Druk Wide', 'Arial Black', sans-serif;
+      --font-body:    'Urbanist', 'Helvetica Neue', sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
 
-    #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(ellipse at 50% 40%, #0a1e18 0%, #080c14 70%); }
+    #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(ellipse at 50% 40%, #0a1e18 0%, #06070b 70%); }
     .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; width: 360px; text-align: center; }
-    .login-box h1 { font-family: 'Syne', sans-serif; font-size: 22px; color: var(--accent); margin-bottom: 6px; letter-spacing: 2px; }
-    .login-box p  { color: var(--muted); font-size: 12px; margin-bottom: 32px; }
-    .login-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-bottom: 16px; outline: none; }
+    .login-box h1 { font-family: var(--font-heading); font-size: 20px; color: var(--accent); margin-bottom: 6px; letter-spacing: 2px; }
+    .login-box p  { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+    .login-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: var(--font-body); font-size: 14px; margin-bottom: 16px; outline: none; }
     .login-box input:focus { border-color: var(--accent); }
     #loginError { color: var(--red); font-size: 12px; margin-top: 12px; display: none; }
 
-    .btn { padding: 11px 20px; border: none; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+    .btn { padding: 11px 20px; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
     .btn:hover { opacity: .85; }
     .btn-primary { background: var(--accent); color: #000; width: 100%; }
     .btn-green   { background: var(--green);   color: #000; }
@@ -38,10 +50,10 @@
 
     #dashboard { display: none; }
     header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
-    header h1 { font-family: 'Syne', sans-serif; font-size: 18px; color: var(--accent); letter-spacing: 2px; }
-    header span { color: var(--muted); font-size: 12px; }
+    header h1 { font-family: var(--font-heading); font-size: 16px; color: var(--accent); letter-spacing: 2px; }
+    header span { color: var(--muted); font-size: 12px; font-family: var(--font-body); }
     nav { display: flex; gap: 4px; padding: 16px 32px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
-    .nav-btn { padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; transition: all .15s; }
+    .nav-btn { padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--muted); font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
     .nav-btn:hover  { color: var(--text); background: var(--border); }
     .nav-btn.active { background: var(--accent); color: #000; font-weight: 700; }
     main { padding: 32px; max-width: 1400px; margin: 0 auto; }
@@ -50,16 +62,16 @@
 
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
     .stat-card .label { color: var(--muted); font-size: 11px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-    .stat-card .value { font-size: 24px; font-weight: 700; color: var(--accent); }
+    .stat-card .value { font-family: var(--font-body); font-size: 22px; font-weight: 700; color: var(--accent); }
     .stat-card .sub   { color: var(--muted); font-size: 11px; margin-top: 4px; }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
 
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
     .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-    .card-header h3 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .card-header h3 { font-family: var(--font-heading); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { padding: 12px 16px; text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
-    td { padding: 12px 16px; border-bottom: 1px solid #0a1018; vertical-align: middle; }
+    th { padding: 12px 16px; text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); font-family: var(--font-body); font-weight: 600; }
+    td { padding: 12px 16px; border-bottom: 1px solid #0a1018; vertical-align: middle; font-family: var(--font-body); }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255,255,255,.02); }
 
@@ -74,13 +86,13 @@
 
     .form-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .form-group   { display: flex; flex-direction: column; gap: 8px; }
-    .form-group label  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-    .form-group input, .form-group select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; outline: none; }
+    .form-group label  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    .form-group input, .form-group select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; }
     .form-group input:focus { border-color: var(--accent); }
     .form-group.full { grid-column: 1/-1; }
     .form-actions { margin-top: 20px; }
-    .result-select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
-    .adj-input { width: 90px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .result-select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: var(--font-body); font-size: 12px; cursor: pointer; }
+    .adj-input { width: 90px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: var(--font-body); font-size: 13px; }
     .loading { color: var(--muted); font-size: 13px; padding: 24px; text-align: center; }
 
     /* ── USER DEEP-DIVE PANEL ──
@@ -91,28 +103,25 @@
     #userPanel { position: fixed; top: 0; right: -540px; width: 540px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; transition: right .3s ease; z-index: 200; }
     #userPanel.open { right: 0; }
     .up-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
-    .up-avatar { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 0%, #147a3a 100%); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #000; flex-shrink: 0; }
+    .up-avatar { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 0%, #147a3a 100%); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #000; flex-shrink: 0; font-family: var(--font-heading); }
     .up-info   { flex: 1; min-width: 0; }
-    .up-name   { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .up-sub    { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .up-name   { font-family: var(--font-heading); font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .up-sub    { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .up-close  { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; flex-shrink: 0; }
     .up-body   { padding: 20px 24px; }
-    /* 4-column mini stats at top of panel */
     .up-stats  { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
     .up-stat   { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 8px; text-align: center; }
-    .up-stat-v { font-size: 16px; font-weight: 700; color: var(--accent); }
+    .up-stat-v { font-family: var(--font-body); font-size: 16px; font-weight: 700; color: var(--accent); }
     .up-stat-l { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
-    /* Section header inside panel */
-    .up-sec    { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 18px 0 8px; }
-    /* Each row item inside panel */
+    .up-sec    { font-family: var(--font-heading); font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 18px 0 8px; }
     .up-row    { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .up-row-l  { flex: 1; min-width: 0; }
-    .up-row-t  { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .up-row-t  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .up-row-s  { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .up-row-r  { text-align: right; flex-shrink: 0; font-size: 13px; font-weight: 700; }
     .up-empty  { font-size: 12px; color: var(--muted); text-align: center; padding: 16px 0; }
 
-    #toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; display: none; z-index: 999; }
+    #toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: var(--font-body); display: none; z-index: 999; }
   </style>
 </head>
 <body>
@@ -198,7 +207,7 @@
             <input type="text" id="userSearch"
               placeholder="Search username, email, telegram ID..."
               oninput="filterUsers()"
-              style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;width:300px;outline:none" />
+              style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;width:300px;outline:none" />
             <button class="btn btn-ghost" onclick="loadUsers()" style="font-size:12px;padding:6px 12px">Refresh</button>
           </div>
         </div>
@@ -224,7 +233,7 @@
         <div class="card-header">
           <h3>Withdrawal Requests</h3>
           <div style="display:flex;gap:8px">
-            <select id="wdFilter" onchange="loadWithdrawals()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:12px">
+            <select id="wdFilter" onchange="loadWithdrawals()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-family:var(--font-body);font-size:13px">
               <option value="pending">Pending</option><option value="processing">Processing</option>
               <option value="completed">Completed</option><option value="rejected">Rejected</option><option value="all">All</option>
             </select>
@@ -242,7 +251,7 @@
         <div class="card-header">
           <h3>Question Submissions</h3>
           <div style="display:flex;gap:8px">
-            <select id="qFilter" onchange="loadQuestions()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:12px">
+            <select id="qFilter" onchange="loadQuestions()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-family:var(--font-body);font-size:13px">
               <option value="pending">Pending</option><option value="approved">Approved</option>
               <option value="rejected">Rejected</option><option value="all">All</option>
             </select>
