@@ -131,10 +131,10 @@
   <div class="login-box">
     <h1>CASSINO TRADE</h1>
     <p>Admin Dashboard — Restricted Access</p>
-    <input type="password" id="passwordInput"    placeholder="Admin password" />
-    <input type="password" id="adminSecretInput" placeholder="Admin API secret" />
+    <input type="password" id="passwordInput" placeholder="Admin password" />
+    <input type="hidden"   id="adminSecretInput" value="" />
     <button class="btn btn-primary" onclick="login()">LOGIN</button>
-    <div id="loginError">Wrong password or secret.</div>
+    <div id="loginError">Wrong password.</div>
   </div>
 </div>
 
@@ -317,11 +317,9 @@ window.addEventListener("load", function () {
   // ── LOGIN ──────────────────────────────────────────────────────────────────
   window.login = function () {
     var pw = document.getElementById("passwordInput").value;
-    var sc = document.getElementById("adminSecretInput").value.trim();
-    if (pw !== ADMIN_UI_PASSWORD || !sc) {
+    if (pw !== ADMIN_UI_PASSWORD) {
       document.getElementById("loginError").style.display = "block"; return;
     }
-    adminSecret = sc;
     document.getElementById("loginScreen").style.display = "none";
     document.getElementById("dashboard").style.display   = "block";
     startClock(); loadAnalytics(); loadMarkets();
@@ -515,7 +513,7 @@ window.addEventListener("load", function () {
 
   function renderUsersTable(users) {
     var tbody=document.getElementById("usersTable");
-    if(!users.length){tbody.innerHTML='<tr><td colspan="7" class="loading">No users found</td></tr>';return;}
+    if(!users.length){tbody.innerHTML='<tr><td colspan="8" class="loading">No users found</td></tr>';return;}
     tbody.innerHTML=users.map(function(u){
       var bal=Number(u.balance_points||0).toLocaleString();
       return '<tr>'+
@@ -524,7 +522,6 @@ window.addEventListener("load", function () {
         '<td style="font-size:12px;color:#94a3b8">'+(u.email||"—")+'</td>'+
         '<td><span class="badge badge-'+(u.role||"user")+'">'+(u.role||"user").toUpperCase()+'</span></td>'+
         '<td>'+renderGroupSelect(u)+'</td>'+
-        '</td>'+
         '<td style="color:#22c063;font-weight:700">'+bal+' pts</td>'+
         '<td>'+
           '<input type="number" class="adj-input" id="adj-'+u.telegram_id+'" placeholder="±pts"/>'+
