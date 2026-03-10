@@ -523,12 +523,7 @@ window.addEventListener("load", function () {
         '<td>'+(u.username?"@"+u.username:"—")+'</td>'+
         '<td style="font-size:12px;color:#94a3b8">'+(u.email||"—")+'</td>'+
         '<td><span class="badge badge-'+(u.role||"user")+'">'+(u.role||"user").toUpperCase()+'</span></td>'+
-        '<td>'+
-          '<select onchange="changeUserGroup(''+esc(u.telegram_id)+'',this.value)" '+
-          'style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-family:var(--font-body);font-size:12px;cursor:pointer">'+
-            '<option value="cassino"'+((!u.user_group||u.user_group==="cassino")?" selected":"")+'">🎰 Cassino</option>'+
-            '<option value="unicas"'+(u.user_group==="unicas"?" selected":"")+'">🎓 UNICAS</option>'+
-          '</select>'+
+        '<td>'+renderGroupSelect(u)+'</td>'+
         '</td>'+
         '<td style="color:#22c063;font-weight:700">'+bal+' pts</td>'+
         '<td>'+
@@ -541,6 +536,18 @@ window.addEventListener("load", function () {
           'View</button></td>'+
         '</tr>';
     }).join("");
+  }
+
+  // Helper: build the group dropdown HTML safely (avoids quote collisions in string concat)
+  function renderGroupSelect(u) {
+    var tid = esc(u.telegram_id);
+    var isCass = !u.user_group || u.user_group === "cassino";
+    return '<select data-tid="' + tid + '" onchange="changeUserGroup(this.dataset.tid, this.value)" ' +
+           'style="background:var(--bg);border:1px solid var(--border);color:var(--text);' +
+           'border-radius:6px;padding:4px 8px;font-family:var(--font-body);font-size:12px;cursor:pointer">' +
+           '<option value="cassino"' + (isCass ? ' selected' : '') + '>🎰 Cassino</option>' +
+           '<option value="unicas"' + (u.user_group === "unicas" ? ' selected' : '') + '>🎓 UNICAS</option>' +
+           '</select>';
   }
 
   // Change a user's group (cassino / unicas) — updates DB immediately
