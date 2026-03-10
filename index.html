@@ -212,8 +212,8 @@
           </div>
         </div>
         <table>
-          <thead><tr><th>Telegram ID</th><th>Username</th><th>Email</th><th>Role</th><th>Balance</th><th>Adjust Balance</th><th>Full Profile</th></tr></thead>
-          <tbody id="usersTable"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+          <thead><tr><th>Telegram ID</th><th>Username</th><th>Email</th><th>Role</th><th>Group</th><th>Balance</th><th>Adjust Balance</th><th>Full Profile</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="8" class="loading">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -487,7 +487,7 @@ window.addEventListener("load", function () {
     // "users_admin" is a clean view — the raw "users" table has duplicate
     // column names (it merges public.users + auth.users) which breaks queries
     var[ur,wr]=await Promise.all([
-      db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier"),
+      db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier,user_group"),
       db.from("wallets").select("telegram_id,balance_points")
     ]);
     var wmap={};
@@ -523,6 +523,13 @@ window.addEventListener("load", function () {
         '<td>'+(u.username?"@"+u.username:"—")+'</td>'+
         '<td style="font-size:12px;color:#94a3b8">'+(u.email||"—")+'</td>'+
         '<td><span class="badge badge-'+(u.role||"user")+'">'+(u.role||"user").toUpperCase()+'</span></td>'+
+        '<td>'+
+          '<select onchange="changeUserGroup(''+esc(u.telegram_id)+'',this.value)" '+
+          'style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-family:var(--font-body);font-size:12px;cursor:pointer">'+
+            '<option value="cassino"'+((!u.user_group||u.user_group==="cassino")?" selected":"")+'">🎰 Cassino</option>'+
+            '<option value="unicas"'+(u.user_group==="unicas"?" selected":"")+'">🎓 UNICAS</option>'+
+          '</select>'+
+        '</td>'+
         '<td style="color:#22c063;font-weight:700">'+bal+' pts</td>'+
         '<td>'+
           '<input type="number" class="adj-input" id="adj-'+u.telegram_id+'" placeholder="±pts"/>'+
@@ -536,23 +543,43 @@ window.addEventListener("load", function () {
     }).join("");
   }
 
+  // Change a user's group (cassino / unicas) — updates DB immediately
+  window.changeUserGroup = async function(tid, group) {
+    var res = await db.from("users").update({ user_group: group }).eq("telegram_id", tid);
+    if (res.error) {
+      showToast("Error: " + res.error.message, true); return;
+    }
+    showToast("Group updated to " + (group === "unicas" ? "🎓 UNICAS" : "🎰 Cassino"));
+    // Update in-memory allUsersData so dropdown stays correct
+    var u = allUsersData.find(function(u){ return u.telegram_id === tid; });
+    if (u) u.user_group = group;
+  };
+
   window.adjustBalance = async function(tid) {
     var inp = document.getElementById("adj-" + tid);
     var amt = parseInt(inp.value);
     if (isNaN(amt) || amt === 0) { showToast("Enter e.g. 500 or -100", true); return; }
 
-    // Step 1: get current balance
+    // Step 1: get current balance from wallets table
     var wr = await db.from("wallets").select("balance_points").eq("telegram_id", tid).single();
     if (wr.error) { showToast("Can't find wallet: " + wr.error.message, true); return; }
     var cur = Number(wr.data.balance_points);
     var nb  = cur + amt;
-    if (nb < 0) { showToast("Would go negative! Current: " + cur + " pts", true); return; }
+    if (nb < 0) { showToast("Would go negative! Current balance: " + cur + " pts", true); return; }
 
-    // Step 2: update wallet balance
-    var ur = await db.from("wallets").update({ balance_points: nb }).eq("telegram_id", tid);
-    if (ur.error) { showToast("Wallet update failed: " + ur.error.message, true); return; }
+    // Step 2: update the wallets table with new balance
+    // updated_at forces the mini app to see a change on next load
+    var ur = await db.from("wallets")
+      .update({ balance_points: nb, updated_at: new Date().toISOString() })
+      .eq("telegram_id", tid);
+    if (ur.error) {
+      // updated_at column might not exist — try without it
+      ur = await db.from("wallets").update({ balance_points: nb }).eq("telegram_id", tid);
+      if (ur.error) { showToast("Wallet update failed: " + ur.error.message, true); return; }
+    }
 
-    // Step 3: write to ledger so history shows the adjustment
+    // Step 3: write to wallet_ledger so history shows the adjustment
+    // (this may fail if RLS blocks anon inserts — wallet is already updated above)
     var lr = await db.from("wallet_ledger").insert({
       telegram_id:   tid,
       amount:        amt,
@@ -560,12 +587,15 @@ window.addEventListener("load", function () {
       type:          "admin_adjust",
       note:          "Admin manually adjusted " + (amt > 0 ? "+" : "") + amt + " pts"
     });
-    // Ledger write failing is not critical — wallet is already updated
-    if (lr.error) { console.warn("Ledger write failed:", lr.error.message); }
+    if (lr.error) {
+      // Non-critical — show warning but don't block success
+      console.warn("Ledger write failed (RLS?):", lr.error.message);
+    }
 
-    showToast("✅ Done! " + (amt > 0 ? "+" : "") + amt + " pts → new balance: " + nb.toLocaleString() + " pts");
+    showToast("✅ " + (amt > 0 ? "+" : "") + amt + " pts — new balance: " + nb.toLocaleString() + " pts");
     inp.value = "";
-    loadUsers(); // refresh the table so new balance shows immediately
+    // Reload table so admin sees updated balance immediately
+    setTimeout(loadUsers, 500);
   };
 
   // ── USER DEEP-DIVE PANEL ───────────────────────────────────────────────────
