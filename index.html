@@ -368,8 +368,9 @@ window.addEventListener("load", function () {
       db.from("users_admin").select("*",{count:"exact",head:true}),
       db.from("markets").select("*",{count:"exact",head:true}).eq("status","open"),
       db.from("wallets").select("balance_points"),
-      // Get ALL memberships (active + cancelled) so history shows correctly
-      db.from("user_memberships").select("telegram_id,tier_id,status,started_at"),
+      // Fetch ALL memberships — both active and cancelled (each was a real purchase)
+      db.from("user_memberships").select("telegram_id,tier_id,status,started_at,created_at"),
+      // Explicit column list to make sure price_eur_cents comes through
       db.from("membership_tiers").select("id,name,price_eur_cents,bonus_points"),
       db.from("payments").select("amount_eur,points_added")
     ]);
@@ -379,28 +380,38 @@ window.addEventListener("load", function () {
     var totalVol=revenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
     var wTotal=(wallets.data||[]).reduce(function(s,w){return s+Number(w.balance_points);},0);
 
+    // Build tier lookup map: { uuid → price in euros }
+    var tierPriceMap = {};
+    (tiers.data||[]).forEach(function(t) {
+      tierPriceMap[t.id] = (t.price_eur_cents||0) / 100;
+    });
+
     // Total deposits ever made (all Stripe payments)
     var totalDepEur=(payments.data||[]).reduce(function(s,p){return s+Number(p.amount_eur);},0);
     var totalDepPts=(payments.data||[]).reduce(function(s,p){return s+Number(p.points_added);},0);
 
-    // Membership revenue — count ALL memberships (each one was a real payment)
-    var tierPriceMap={};
-    (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=(t.price_eur_cents||0)/100;});
-    var memRevEur=(memberships.data||[])
-      .reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0);},0);
-    var memRevPts=Math.round(memRevEur*10);
-    var activeMem=(memberships.data||[]).filter(function(m){return m.status==="active";}).length;
+    // Membership revenue — multiply each membership by its tier price
+    var memRevEur = (memberships.data||[]).reduce(function(s,m){
+      return s + (tierPriceMap[m.tier_id] || 0);
+    }, 0);
+    var activeMem = (memberships.data||[]).filter(function(m){ return m.status==="active"; }).length;
 
     var feeEur=(totalFee/10).toFixed(2);
 
-    document.getElementById("statRevenue").innerText=totalFee.toLocaleString()+" pts (€"+feeEur+")";
-    document.getElementById("statVolume").innerText=totalVol.toLocaleString()+" pts";
-    document.getElementById("statTrades").innerText=(trades.count||0).toLocaleString();
-    document.getElementById("statUsers").innerText=(users.count||0).toLocaleString();
-    document.getElementById("statOpen").innerText=(open.count||0).toLocaleString();
-    document.getElementById("statWallets").innerText=wTotal.toLocaleString()+" pts";
-    document.getElementById("statMemRev").innerText="€"+memRevEur.toFixed(2)+" · "+activeMem+" active";
-    document.getElementById("statDeposits").innerText="€"+totalDepEur.toFixed(2)+" ("+totalDepPts.toLocaleString()+" pts)";
+    document.getElementById("statRevenue").innerText = totalFee.toLocaleString() + " pts (€" + feeEur + ")";
+    document.getElementById("statVolume").innerText  = totalVol.toLocaleString() + " pts (€" + (totalVol/10).toFixed(2) + ")";
+    document.getElementById("statTrades").innerText  = (trades.count||0).toLocaleString();
+    document.getElementById("statUsers").innerText   = (users.count||0).toLocaleString();
+    document.getElementById("statOpen").innerText    = (open.count||0).toLocaleString();
+    document.getElementById("statWallets").innerText = wTotal.toLocaleString() + " pts (€" + (wTotal/10).toFixed(2) + ")";
+
+    // Show membership revenue — if still 0, show count with diagnostic note
+    var memRevDisplay = memRevEur > 0
+      ? "€" + memRevEur.toFixed(2) + " · " + activeMem + " active"
+      : (memberships.data||[]).length + " memberships (€0 — check RLS on membership_tiers)";
+
+    document.getElementById("statMemRev").innerText   = memRevDisplay;
+    document.getElementById("statDeposits").innerText = "€" + totalDepEur.toFixed(2) + " (" + totalDepPts.toLocaleString() + " pts)";
 
     var tbody=document.getElementById("revenueTable");
     if(!revenue.length){tbody.innerHTML='<tr><td colspan="4" class="loading">No trading revenue yet</td></tr>';return;}
@@ -525,19 +536,36 @@ window.addEventListener("load", function () {
     }).join("");
   }
 
-  window.adjustBalance=async function(tid){
-    var inp=document.getElementById("adj-"+tid);
-    var amt=parseInt(inp.value);
-    if(isNaN(amt)||amt===0){showToast("Enter e.g. 500 or -100",true);return;}
-    var wr=await db.from("wallets").select("balance_points").eq("telegram_id",tid).single();
-    var cur=wr.data?wr.data.balance_points:0;
-    var nb=cur+amt;
-    if(nb<0){showToast("Would go negative!",true);return;}
-    var ur=await db.from("wallets").update({balance_points:nb}).eq("telegram_id",tid);
-    if(ur.error){showToast("Error: "+ur.error.message,true);return;}
-    await db.rpc("write_ledger",{p_telegram_id:tid,p_amount:amt,p_type:"admin_adjust",p_reference_id:null,p_note:"Admin adjusted "+(amt>0?"+":"")+amt+" pts"});
-    showToast("Adjusted "+(amt>0?"+":"")+amt+" pts");
-    inp.value=""; loadUsers();
+  window.adjustBalance = async function(tid) {
+    var inp = document.getElementById("adj-" + tid);
+    var amt = parseInt(inp.value);
+    if (isNaN(amt) || amt === 0) { showToast("Enter e.g. 500 or -100", true); return; }
+
+    // Step 1: get current balance
+    var wr = await db.from("wallets").select("balance_points").eq("telegram_id", tid).single();
+    if (wr.error) { showToast("Can't find wallet: " + wr.error.message, true); return; }
+    var cur = Number(wr.data.balance_points);
+    var nb  = cur + amt;
+    if (nb < 0) { showToast("Would go negative! Current: " + cur + " pts", true); return; }
+
+    // Step 2: update wallet balance
+    var ur = await db.from("wallets").update({ balance_points: nb }).eq("telegram_id", tid);
+    if (ur.error) { showToast("Wallet update failed: " + ur.error.message, true); return; }
+
+    // Step 3: write to ledger so history shows the adjustment
+    var lr = await db.from("wallet_ledger").insert({
+      telegram_id:   tid,
+      amount:        amt,
+      balance_after: nb,
+      type:          "admin_adjust",
+      note:          "Admin manually adjusted " + (amt > 0 ? "+" : "") + amt + " pts"
+    });
+    // Ledger write failing is not critical — wallet is already updated
+    if (lr.error) { console.warn("Ledger write failed:", lr.error.message); }
+
+    showToast("✅ Done! " + (amt > 0 ? "+" : "") + amt + " pts → new balance: " + nb.toLocaleString() + " pts");
+    inp.value = "";
+    loadUsers(); // refresh the table so new balance shows immediately
   };
 
   // ── USER DEEP-DIVE PANEL ───────────────────────────────────────────────────
@@ -677,18 +705,20 @@ window.addEventListener("load", function () {
     var tierMap={};
     (tiersRes.data||[]).forEach(function(t){tierMap[t.id]=t;});
 
-    // Build membership rows — shown as revenue entries
-    var memRows=(memRes.data||[]).map(function(m){
-      var t=tierMap[m.tier_id]||{};
-      var priceEur=((t.price_eur_cents||0)/100).toFixed(2);
+    // Build membership rows — shown as revenue entries in ledger
+    var memRows = (memRes.data||[]).map(function(m) {
+      var t = tierMap[m.tier_id] || {};
+      var priceEur = ((t.price_eur_cents || 0) / 100).toFixed(2);
+      // If price is 0, tier lookup failed — show tier_id for debug
+      var priceLabel = t.price_eur_cents ? "€" + priceEur : "€? (tier: " + (m.tier_id||"?").slice(0,8) + "...)";
       return {
-        _isMem:true,
-        created_at: m.started_at||m.created_at,
+        _isMem: true,
+        created_at:  m.started_at || m.created_at,
         telegram_id: m.telegram_id,
-        type: "membership_purchase",
-        amount: "€"+priceEur,
-        balance_after: "—",
-        note: (t.name||"?")+" Plan · "+t.bonus_points+" bonus pts given"
+        type:        "membership_purchase",
+        amount:      priceLabel,
+        balance_after: (t.bonus_points || 0) > 0 ? "+" + t.bonus_points + " pts bonus" : "—",
+        note:        (t.name || "Unknown") + " Plan · status: " + (m.status || "?")
       };
     });
 
