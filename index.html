@@ -264,8 +264,8 @@
           </div>
         </div>
         <table>
-          <thead><tr><th>Telegram ID</th><th>Username</th><th>Email</th><th>Role</th><th>Group</th><th>Balance</th><th>Adjust Balance</th><th>Full Profile</th></tr></thead>
-          <tbody id="usersTable"><tr><td colspan="8" class="loading">Loading...</td></tr></tbody>
+          <thead><tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Group</th><th>Balance</th><th>Adjust Balance</th><th>Full Profile</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -641,19 +641,33 @@ window.addEventListener("load", function () {
 
   // ── USERS ──────────────────────────────────────────────────────────────────
   window.loadUsers = async function() {
-    // Load users and wallets at the same time (parallel = faster)
-    var [ur, wr] = await Promise.all([
-      // users_admin is a DB view — the raw "users" table has duplicate column names
-      db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier,user_group"),
-      db.from("wallets").select("telegram_id,balance_points")
-    ]);
+    var tbody = document.getElementById("usersTable");
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading users...</td></tr>';
+
+    // Try users_admin view first — if it fails (RLS), fall back to raw users table
+    // We keep telegram_id internally for wallet lookups but NEVER show it in the UI
+    var ur = await db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier,user_group");
+    if (ur.error || !ur.data || ur.data.length === 0) {
+      // Fallback: query the raw users table directly
+      ur = await db.from("users").select("telegram_id,username,full_name,email,role,membership_tier,user_group");
+    }
+
+    // Also load all wallets so we can show balance per user
+    var wr = await db.from("wallets").select("telegram_id,balance_points");
+
     // Build a quick lookup map: telegram_id → balance_points
     var wmap = {};
     (wr.data||[]).forEach(function(w){ wmap[w.telegram_id] = w.balance_points; });
+
     // Merge wallet balance into each user and keep in memory for fast search
     allUsersData = (ur.data||[]).map(function(u){
       return Object.assign({}, u, {balance_points: Number(wmap[u.telegram_id]||0)});
     });
+
+    if (!allUsersData.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found — check RLS policies on users table</td></tr>';
+      return;
+    }
     renderUsersTable(allUsersData);
   };
 
@@ -662,8 +676,7 @@ window.addEventListener("load", function () {
     var q = document.getElementById("userSearch").value.toLowerCase().trim();
     if (!q) { renderUsersTable(allUsersData); return; }
     renderUsersTable(allUsersData.filter(function(u){
-      return (u.telegram_id||"").includes(q) ||
-             (u.username||"").toLowerCase().includes(q) ||
+      return (u.username||"").toLowerCase().includes(q) ||
              (u.email||"").toLowerCase().includes(q) ||
              (u.full_name||"").toLowerCase().includes(q);
     }));
@@ -675,25 +688,38 @@ window.addEventListener("load", function () {
   function renderUsersTable(users) {
     var tbody = document.getElementById("usersTable");
     if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="loading">No users found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
       return;
     }
     tbody.innerHTML = users.map(function(u){
-      var bal = Number(u.balance_points||0).toLocaleString();
+      var bal      = Number(u.balance_points||0).toLocaleString();
+      // Use telegram_id as the internal key for the input ID (hidden from user, just a unique key)
+      var safeKey  = esc(u.telegram_id||u.email||u.username||"");
+      var dispName = u.full_name || (u.username ? '@'+u.username : u.email || '—');
       return '<tr>'+
-        '<td style="color:#64748b;font-size:12px">'+u.telegram_id+'</td>'+
-        '<td>'+(u.username ? '@'+u.username : '—')+'</td>'+
-        '<td style="font-size:12px;color:#94a3b8">'+(u.email||'—')+'</td>'+
-        '<td><span class="badge badge-'+(u.role||'user')+'">'+(u.role||'user').toUpperCase()+'</span></td>'+
-        '<td>'+renderGroupSelect(u)+'</td>'+
-        '<td style="color:#22c063;font-weight:700">'+bal+' pts</td>'+
-        '<td>'+
-          '<input type="number" class="adj-input" id="adj-'+u.telegram_id+'" placeholder="±pts"/>'+
-          '<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;margin-left:6px" onclick="adjustBalance(\''+u.telegram_id+'\')">ADJUST</button>'+
+        // Column 1: Username (main identifier shown to admin)
+        '<td style="font-weight:600">'+
+          (u.username ? '<span style="color:var(--accent)">@'+u.username+'</span>' : '<span style="color:#64748b">—</span>')+
         '</td>'+
+        // Column 2: Full name
+        '<td style="font-size:13px">'+(u.full_name||'—')+'</td>'+
+        // Column 3: Email
+        '<td style="font-size:12px;color:#94a3b8">'+(u.email||'—')+'</td>'+
+        // Column 4: Role badge
+        '<td><span class="badge badge-'+(u.role||'user')+'">'+(u.role||'user').toUpperCase()+'</span></td>'+
+        // Column 5: Group dropdown
+        '<td>'+renderGroupSelect(u)+'</td>'+
+        // Column 6: Balance
+        '<td style="color:#22c063;font-weight:700">'+bal+' pts</td>'+
+        // Column 7: Adjust balance input
+        '<td>'+
+          '<input type="number" class="adj-input" id="adj-'+safeKey+'" placeholder="±pts"/>'+
+          '<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;margin-left:6px" onclick="adjustBalance(\''+safeKey+'\')">ADJUST</button>'+
+        '</td>'+
+        // Column 8: View full profile button
         '<td>'+
           '<button class="btn" style="background:#22c063;color:#000;font-size:11px;padding:5px 12px" '+
-          'onclick="openUserPanel(\''+esc(u.telegram_id)+'\',\''+esc(u.username||'')+'\',\''+esc(u.email||'')+'\',\''+esc(u.full_name||'')+'\','+u.balance_points+')">'+
+          'onclick="openUserPanel(\''+safeKey+'\',\''+esc(u.username||'')+'\',\''+esc(u.email||'')+'\',\''+esc(u.full_name||'')+'\','+u.balance_points+')">'+
           'View</button>'+
         '</td>'+
       '</tr>';
@@ -702,9 +728,10 @@ window.addEventListener("load", function () {
 
   // Build the Cassino / UNICAS group dropdown for each row
   function renderGroupSelect(u) {
-    var tid    = esc(u.telegram_id);
+    // Use telegram_id as the data key (internal only — not displayed)
+    var key    = esc(u.telegram_id||u.email||u.username||"");
     var isCass = !u.user_group || u.user_group === "cassino";
-    return '<select data-tid="'+tid+'" onchange="changeUserGroup(this.dataset.tid, this.value)" '+
+    return '<select data-key="'+key+'" onchange="changeUserGroup(this.dataset.key, this.value)" '+
            'style="background:var(--bg);border:1px solid var(--border);color:var(--text);'+
            'border-radius:6px;padding:4px 8px;font-family:var(--font-body);font-size:12px;cursor:pointer">'+
            '<option value="cassino"'+(isCass ? ' selected' : '')+'>🎰 Cassino</option>'+
@@ -712,21 +739,32 @@ window.addEventListener("load", function () {
            '</select>';
   }
 
-  // Change a user's group — saves to DB immediately
-  window.changeUserGroup = async function(tid, group) {
-    var res = await db.from("users").update({user_group: group}).eq("telegram_id", tid);
+  // Change a user's group — saves to DB using telegram_id (internal key)
+  window.changeUserGroup = async function(key, group) {
+    // Find the user in memory first to get their telegram_id
+    var u = allUsersData.find(function(u){
+      return (u.telegram_id||u.email||u.username||"") === key;
+    });
+    if (!u) { showToast("User not found", true); return; }
+    var res = await db.from("users").update({user_group: group}).eq("telegram_id", u.telegram_id);
     if (res.error) { showToast("Error: "+res.error.message, true); return; }
     showToast("Group updated to "+(group==="unicas" ? "🎓 UNICAS" : "🎰 Cassino"));
-    // Update the in-memory data so dropdown stays correct without a full reload
-    var u = allUsersData.find(function(u){ return u.telegram_id === tid; });
-    if (u) u.user_group = group;
+    // Update in-memory data so dropdown stays correct without a full reload
+    u.user_group = group;
   };
 
   // Add or subtract points from a user's wallet
-  window.adjustBalance = async function(tid) {
-    var inp = document.getElementById("adj-"+tid);
+  window.adjustBalance = async function(key) {
+    var inp = document.getElementById("adj-"+key);
     var amt = parseInt(inp.value);
     if (isNaN(amt) || amt === 0) { showToast("Enter e.g. 500 or -100", true); return; }
+
+    // Find the user in memory to get their telegram_id for the wallet lookup
+    var u = allUsersData.find(function(u){
+      return (u.telegram_id||u.email||u.username||"") === key;
+    });
+    if (!u) { showToast("User not found", true); return; }
+    var tid = u.telegram_id;
 
     // Step 1: read current balance
     var wr = await db.from("wallets").select("balance_points").eq("telegram_id", tid).single();
@@ -736,13 +774,13 @@ window.addEventListener("load", function () {
     if (nb < 0) { showToast("Would go negative! Current: "+cur+" pts", true); return; }
 
     // Step 2: save the new balance
-    var ur = await db.from("wallets")
+    var ur2 = await db.from("wallets")
       .update({balance_points: nb, updated_at: new Date().toISOString()})
       .eq("telegram_id", tid);
-    if (ur.error) {
+    if (ur2.error) {
       // updated_at column might not exist — retry without it
-      ur = await db.from("wallets").update({balance_points: nb}).eq("telegram_id", tid);
-      if (ur.error) { showToast("Wallet update failed: "+ur.error.message, true); return; }
+      ur2 = await db.from("wallets").update({balance_points: nb}).eq("telegram_id", tid);
+      if (ur2.error) { showToast("Wallet update failed: "+ur2.error.message, true); return; }
     }
 
     // Step 3: write to the ledger for history (non-critical — might fail due to RLS)
@@ -762,12 +800,18 @@ window.addEventListener("load", function () {
 
   // ── USER DEEP-DIVE PANEL ───────────────────────────────────────────────────
   // Opens a slide-in panel showing everything about one specific user
-  window.openUserPanel = async function(tid, username, email, fullName, balPts) {
-    var displayName = fullName || (username ? "@"+username : "User …"+tid.slice(-4));
+  // key = telegram_id (internal), shown fields = username / email / full name
+  window.openUserPanel = async function(key, username, email, fullName, balPts) {
+    // Find the user in memory so we have their telegram_id for DB queries
+    var u   = allUsersData.find(function(u){ return (u.telegram_id||u.email||u.username||"") === key; });
+    var tid = u ? u.telegram_id : key; // fallback to key if not found
+
+    var displayName = fullName || (username ? "@"+username : email || "Unknown user");
     // Fill header immediately so it shows something while data loads
     document.getElementById("upAvatar").innerText  = displayName[0].toUpperCase();
     document.getElementById("upName").innerText    = displayName;
-    document.getElementById("upSub").innerText     = email || ("Telegram ID: "+tid);
+    // Show email as subtitle instead of telegram ID
+    document.getElementById("upSub").innerText     = email || (username ? "@"+username : "No email");
     document.getElementById("upBalance").innerText = Number(balPts).toLocaleString();
     // Reset all 4 lists to "Loading..."
     ["upDepList","upWdList","upTradeList","upRefList"].forEach(function(id){
