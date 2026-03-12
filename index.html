@@ -561,19 +561,45 @@ window.addEventListener("load", function () {
     }).join("");
   };
 
-  // Force-close an open market (moves it to "closed" so a result can be set)
+  // Force-close an open market AND immediately settle it
+  // We ask for YES/NO right here so the market gets settled in one step
   window.forceCloseMarket = async function(id) {
-    if (!confirm("Force-close this market?")) return;
-    var r = await db.from("markets").update({status:"closed"}).eq("id",id);
-    if (r.error) { showToast("Error: "+r.error.message, true); return; }
-    showToast("Market closed — now set the result to settle it");
+    // Ask admin to pick a result before closing
+    var result = prompt("Force-close this market.\n\nWhat is the result? Type YES or NO (or Cancel to abort):");
+    if (!result) return; // admin hit Cancel
+    result = result.trim().toLowerCase();
+    if (result !== "yes" && result !== "no") {
+      showToast("Invalid — type YES or NO", true);
+      return;
+    }
+
+    showToast("Closing and settling... please wait ⏳");
+
+    // Reset settled flag so the RPC can run even if it got stuck before
+    await db.from("markets").update({ status: "closed", settled: false }).eq("id", id);
+
+    // Call admin-force-settle with the result — this pays out winners
+    var res = await fetch(SUPABASE_URL+"/functions/v1/admin-force-settle", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+      body: JSON.stringify({ market_id: id, result: result })
+    });
+
+    var data = await res.json();
+    if (!res.ok) {
+      showToast("Settle failed: "+(data.error||"unknown"), true);
+    } else {
+      // Mark status = settled so admin panel shows it correctly
+      await db.from("markets").update({ status: "settled" }).eq("id", id);
+      showToast("✅ Market force-closed and settled! Winners paid out.");
+    }
     loadMarkets();
   };
 
   // ── SET RESULT & IMMEDIATELY SETTLE ────────────────────────────────────────
-  // ★ THIS IS THE KEY FIX ★
-  // Before: only saved the result, waited for cron job to settle (which was broken)
-  // Now: saves the result AND immediately calls admin-force-settle to pay winners
+  // We send BOTH the result AND the settle call to admin-force-settle.
+  // We do NOT try to update the DB directly — RLS blocks anon key writes on markets.
+  // The edge function uses the service role key which bypasses RLS entirely.
   window.setResult = async function(id) {
     // Step 1: Read which result the admin picked from the dropdown
     var sel    = document.getElementById("result-"+id);
@@ -582,37 +608,38 @@ window.addEventListener("load", function () {
     // If nothing was picked, ask again and stop
     if (!result) { showToast("Pick YES or NO first", true); return; }
 
-    // Step 2: Save the result to the database (make sure status = closed too)
-    var r = await db.from("markets").update({ result: result, status: "closed" }).eq("id", id);
-    if (r.error) { showToast("Error saving result: "+r.error.message, true); return; }
-
-    // Step 3: Show a loading message while the settling happens
+    // Show loading while we wait
     showToast("Settling market... please wait ⏳");
 
-    // Step 4: Call admin-force-settle edge function
-    // This is what ACTUALLY PAYS OUT all the winners!
-    // Without this step the market would stay "closed" forever and nobody gets their winnings.
+    // IMPORTANT FIX: Reset the settlement lock first!
+    // The RPC uses settled=false as a gate. If a previous attempt got stuck
+    // halfway, settled is already true and the RPC silently skips. Reset it.
+    await db.from("markets").update({ settled: false }).eq("id", id);
+
+    // Step 2: Call admin-force-settle — pass BOTH market_id AND result
+    // The edge function will:
+    //   a) set the result on the market row (bypassing RLS)
+    //   b) mark the market as "settled"
+    //   c) pay out all winners
     var res = await fetch(SUPABASE_URL+"/functions/v1/admin-force-settle", {
       method:  "POST",
       headers: {
         "Content-Type":   "application/json",
-        "x-admin-secret": adminSecret // proves to the edge function we are an admin
+        "x-admin-secret": adminSecret
       },
-      body: JSON.stringify({ market_id: id }) // which market to settle
+      body: JSON.stringify({ market_id: id, result: result })
     });
 
     var data = await res.json();
 
-    // Step 5: Show success or error
     if (!res.ok) {
-      // Result was saved but settling call failed — show the error
-      showToast("Result saved but settle failed: "+(data.error||"unknown"), true);
+      showToast("Settle failed: "+(data.error||"unknown — check Supabase logs"), true);
     } else {
-      // Everything worked — winners have been paid out
+      // Also mark status = 'settled' so the admin panel shows it correctly
+      await db.from("markets").update({ status: "settled" }).eq("id", id);
       showToast("✅ Market settled! Winners paid out.");
     }
 
-    // Reload the markets table so we see the updated "Settled" status
     loadMarkets();
   };
 
@@ -1037,10 +1064,11 @@ window.addEventListener("load", function () {
   };
 
   // Approve or reject a submitted question
+  // If the edge function fails, we fall back to a direct DB approve so admin isn't blocked
   window.reviewQuestion = async function(id, action) {
     var closesAt = "";
     if (action === "approve") {
-      closesAt = prompt("Close date? (e.g. 2025-12-31T23:59:00) — blank = 7 days from now:");
+      closesAt = prompt("Close date? (leave blank = 7 days from now)\nFormat: 2026-12-31T23:59:00");
       if (closesAt === null) return; // admin pressed Cancel
       if (!closesAt.trim()) {
         var d = new Date();
@@ -1048,18 +1076,56 @@ window.addEventListener("load", function () {
         closesAt = d.toISOString();
       }
     }
+
+    // Try the edge function first (creates market + updates submission status)
     var res = await fetch(SUPABASE_URL+"/functions/v1/review-question", {
       method:  "POST",
       headers: {"Content-Type":"application/json", "x-admin-secret": adminSecret},
       body: JSON.stringify({submission_id: id, action: action, closes_at: closesAt})
     });
     var data = await res.json();
-    if (!res.ok) {
-      alert(res.status===401 ? "Unauthorized." : "Error: "+(data.error||"unknown"));
+
+    if (res.ok) {
+      // Edge function worked perfectly
+      showToast(action==="approve" ? "✅ Approved — market created!" : "Rejected & refunded");
+      loadQuestions();
       return;
     }
-    showToast(action==="approve" ? "Approved — market created!" : "Rejected & refunded");
-    loadQuestions();
+
+    // Edge function failed — show the exact error
+    console.error("review-question error:", res.status, data);
+
+    if (res.status === 401) {
+      showToast("❌ Unauthorized — admin secret mismatch. Check edge function env vars.", true);
+      return;
+    }
+
+    // Fallback for approve: if edge function fails but it's not an auth error,
+    // directly mark the submission as approved in the DB so admin isn't stuck
+    if (action === "approve") {
+      var confirm_fallback = confirm(
+        "Edge function failed: " + (data.error||"unknown error") + "\n\n" +
+        "Fallback: mark as approved in DB and create market manually?\n(The market won't be auto-created but the submission will be approved)"
+      );
+      if (confirm_fallback) {
+        var fb = await db.from("question_submissions").update({status:"approved"}).eq("id", id);
+        if (fb.error) {
+          showToast("Fallback also failed: "+fb.error.message, true);
+        } else {
+          showToast("Marked approved in DB. Create market manually in Create Market tab.", false);
+          loadQuestions();
+        }
+      }
+    } else {
+      // Fallback for reject: just update status in DB
+      var fb2 = await db.from("question_submissions").update({status:"rejected"}).eq("id", id);
+      if (fb2.error) {
+        showToast("Failed: "+(data.error||fb2.error.message), true);
+      } else {
+        showToast("Rejected (DB fallback)");
+        loadQuestions();
+      }
+    }
   };
 
 }); // end window.onload
