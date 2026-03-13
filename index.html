@@ -1125,45 +1125,42 @@ window.addEventListener("load", function () {
   }
 
   // ── APPROVE suggestion → create market and mark approved ──────────────────
-  window.approveSuggestion = async function(id) {
-    showToast("Approving... ⏳");
+window.approveSuggestion = async function(id) {
+  showToast("Approving... ⏳");
 
-    // Get the suggestion data
-    var res = await db.from("market_suggestions").select("*").eq("id", id).single();
-    if (res.error || !res.data) { showToast("Failed to load suggestion", true); return; }
-    var s = res.data;
+  // Load the full suggestion from DB
+  var res = await db.from("market_suggestions").select("*").eq("id", id).single();
+  if (res.error || !res.data) { showToast("Failed to load suggestion", true); return; }
+  var s = res.data;
 
-    // Create the market using the admin-create-market edge function
-    var marketRes = await fetch(SUPABASE_URL+"/functions/v1/admin-create-market", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
-      body: JSON.stringify({
-        question:   s.question,
-        closes_at:  s.resolution_time,
-        source_api: s.source_api,
-        auto_generated: true
-      })
-    });
+  // Call admin-create-market with ALL the extra fields
+  // so auto-resolve knows what API to check later
+  var marketRes = await fetch(SUPABASE_URL+"/functions/v1/admin-create-market", {
+    method:  "POST",
+    headers: {
+      "Content-Type":   "application/json",
+      "x-admin-secret": adminSecret
+    },
+    body: JSON.stringify({
+      question:        s.question,
+      closes_at:       s.resolution_time,
+      source_api:      s.source_api,      // ← e.g. "coingecko"
+      source_data:     s.source_data,     // ← original trend data
+      auto_generated:  true,              // ← marks it as AI generated
+      suggestion_id:   s.id              // ← links back to the suggestion
+    })
+  });
 
-    var marketData = await marketRes.json();
-    if (!marketRes.ok) {
-      showToast("Failed to create market: "+(marketData.error||"unknown"), true);
-      return;
-    }
+  var marketData = await marketRes.json();
+  if (!marketRes.ok) {
+    showToast("Failed to create market: "+(marketData.error||"unknown"), true);
+    return;
+  }
 
-    // Mark suggestion as approved + store reference to the created market
-    await db.from("market_suggestions")
-      .update({
-        status:      "approved",
-        reviewed_at: new Date().toISOString(),
-        admin_notes: (s.admin_notes||"") + " | Approved by admin"
-      })
-      .eq("id", id);
-
-    showToast("✅ Approved! Market is now live.");
-    loadAiSuggestions();
-    loadMarkets(); // refresh markets tab too
-  };
+  showToast("✅ Approved! Market is now live.");
+  loadAiSuggestions();
+  loadMarkets();
+};
 
   // ── REJECT suggestion ─────────────────────────────────────────────────────
   window.rejectSuggestion = async function(id) {
