@@ -88,6 +88,8 @@
     .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; }
     .stat-card .label { color:var(--muted); font-size:10px; margin-bottom:5px; text-transform:uppercase; letter-spacing:1px; }
     .stat-card .value { font-size:17px; font-weight:700; color:var(--accent); line-height:1.2; word-break:break-all; }
+    /* ── The euro line shown below the points value ── */
+    .stat-card .value .euro-sub { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:3px; }
     .stat-card .sub   { color:var(--muted); font-size:10px; margin-top:3px; }
     @media(min-width:768px){ .stat-card { padding:18px; } .stat-card .value { font-size:20px; } }
 
@@ -523,8 +525,6 @@ window.addEventListener("load", function () {
   }
 
   // ── CHECK MARKETS NEEDING MANUAL RESOLUTION ───
-  // Shows red badge on Markets tab and alert banner
-  // Also sends email to admin (once per session)
   async function checkMarketsNeedingResolution() {
     var res = await db.from("markets")
       .select("id,question,auto_generated")
@@ -534,18 +534,15 @@ window.addEventListener("load", function () {
     var alertEl = document.getElementById("resolveAlert");
 
     if (needManual.length > 0) {
-      // Add red badge to Markets nav button
       if (!document.getElementById("marketsBadge")) {
         var badge = document.createElement("span");
         badge.className = "nav-badge"; badge.id = "marketsBadge";
         navBtn.appendChild(badge);
       }
       document.getElementById("marketsBadge").innerText = needManual.length;
-      // Show red banner in markets tab
       document.getElementById("resolveAlertText").innerText =
         needManual.length+" AI market"+(needManual.length>1?"s need":" needs")+" manual resolution";
       alertEl.style.display = "block";
-      // Email admin once per session
       if (!window._emailSentThisSession) {
         window._emailSentThisSession = true;
         sendResolutionEmail(needManual);
@@ -557,7 +554,6 @@ window.addEventListener("load", function () {
     }
   }
 
-  // Calls send-admin-email edge function (uses Resend)
   async function sendResolutionEmail(markets) {
     try {
       var list = markets.map(function(m,i){ return (i+1)+". "+m.question; }).join("\n");
@@ -573,6 +569,7 @@ window.addEventListener("load", function () {
   }
 
   // ── ANALYTICS ────────────────────────────────
+  // 💡 10 points = €1 — that's the conversion rate used everywhere below
   window.loadAnalytics = async function() {
     var mr = await db.from("markets").select("id,question");
     var marketMap = {}; (mr.data||[]).forEach(function(m){ marketMap[m.id]=m.question; });
@@ -586,33 +583,72 @@ window.addEventListener("load", function () {
       db.from("membership_tiers").select("id,price_eur_cents"),
       db.from("payments").select("amount_eur,points_added")
     ]);
-    var revenue=rev.data||[];
-    var totalFee=revenue.reduce(function(s,r){return s+Number(r.fee_collected);},0);
-    var totalVol=revenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
-    var wTotal=(wallets.data||[]).reduce(function(s,w){return s+Number(w.balance_points);},0);
-    var tierPriceMap={}; (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=(t.price_eur_cents||0)/100;});
-    var totalDepEur=(payments.data||[]).reduce(function(s,p){return s+Number(p.amount_eur);},0);
-    var totalDepPts=(payments.data||[]).reduce(function(s,p){return s+Number(p.points_added);},0);
-    var memRevEur=(memberships.data||[]).reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0);},0);
-    var activeMem=(memberships.data||[]).filter(function(m){return m.status==="active";}).length;
-    document.getElementById("statRevenue").innerText=totalFee.toLocaleString()+" pts";
-    document.getElementById("statVolume").innerText=totalVol.toLocaleString()+" pts";
-    document.getElementById("statTrades").innerText=(trades.count||0).toLocaleString();
-    document.getElementById("statUsers").innerText=(users.count||0).toLocaleString();
-    document.getElementById("statOpen").innerText=(open.count||0).toLocaleString();
-    document.getElementById("statWallets").innerText=wTotal.toLocaleString()+" pts";
-    document.getElementById("statMemRev").innerText=memRevEur>0?"€"+memRevEur.toFixed(2)+" · "+activeMem+" active":(memberships.data||[]).length+" total";
-    document.getElementById("statDeposits").innerText="€"+totalDepEur.toFixed(2)+" ("+totalDepPts.toLocaleString()+" pts)";
-    var tbody=document.getElementById("revenueTable");
+
+    var revenue  = rev.data||[];
+    var totalFee = revenue.reduce(function(s,r){return s+Number(r.fee_collected);},0);
+    var totalVol = revenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
+    var wTotal   = (wallets.data||[]).reduce(function(s,w){return s+Number(w.balance_points);},0);
+    var tierPriceMap = {}; (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=(t.price_eur_cents||0)/100;});
+    var totalDepEur  = (payments.data||[]).reduce(function(s,p){return s+Number(p.amount_eur);},0);
+    var totalDepPts  = (payments.data||[]).reduce(function(s,p){return s+Number(p.points_added);},0);
+    var memRevEur    = (memberships.data||[]).reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0);},0);
+    var activeMem    = (memberships.data||[]).filter(function(m){return m.status==="active";}).length;
+
+    // ── TOTAL REVENUE ──
+    // Show the points in big green, then euros in small grey underneath
+    // dividing by 10 converts points → euros (10 pts = €1)
+    document.getElementById("statRevenue").innerHTML =
+      totalFee.toLocaleString() + " pts" +
+      '<span class="euro-sub">€' + (totalFee / 10).toFixed(2) + '</span>';
+
+    // ── TOTAL VOLUME ──
+    // Same pattern: points on top, euros below
+    document.getElementById("statVolume").innerHTML =
+      totalVol.toLocaleString() + " pts" +
+      '<span class="euro-sub">€' + (totalVol / 10).toFixed(2) + '</span>';
+
+    // ── TOTAL TRADES — just a plain number, no euro conversion needed ──
+    document.getElementById("statTrades").innerText = (trades.count||0).toLocaleString();
+
+    // ── USERS — just a plain number ──
+    document.getElementById("statUsers").innerText = (users.count||0).toLocaleString();
+
+    // ── OPEN MARKETS — just a plain number ──
+    document.getElementById("statOpen").innerText = (open.count||0).toLocaleString();
+
+    // ── POINTS IN WALLETS ──
+    // Total points sitting in all user wallets, converted to euros below
+    document.getElementById("statWallets").innerHTML =
+      wTotal.toLocaleString() + " pts" +
+      '<span class="euro-sub">€' + (wTotal / 10).toFixed(2) + '</span>';
+
+    // ── MEMBERSHIP REVENUE — already in euros, show active count too ──
+    document.getElementById("statMemRev").innerText =
+      memRevEur > 0
+        ? "€" + memRevEur.toFixed(2) + " · " + activeMem + " active"
+        : (memberships.data||[]).length + " total";
+
+    // ── TOTAL DEPOSITS ──
+    // Already in euros from Stripe — show euros on top, points below
+    document.getElementById("statDeposits").innerHTML =
+      "€" + totalDepEur.toFixed(2) +
+      '<span class="euro-sub">' + totalDepPts.toLocaleString() + ' pts</span>';
+
+    // ── REVENUE PER MARKET TABLE ──
+    // Fill the table with one row per market, most recent first
+    var tbody = document.getElementById("revenueTable");
     if(!revenue.length){tbody.innerHTML='<tr><td colspan="4" class="loading">No revenue yet</td></tr>';return;}
-    tbody.innerHTML=revenue.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);}).map(function(r){
-      return '<tr>'+
-        '<td style="max-width:220px;font-size:11px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
-        '<td>'+Number(r.total_pool).toLocaleString()+' pts</td>'+
-        '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts</td>'+
-        '<td style="color:#64748b;font-size:11px">'+new Date(r.created_at).toLocaleString()+'</td>'+
-      '</tr>';
-    }).join("");
+    tbody.innerHTML = revenue
+      .sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);})
+      .map(function(r){
+        return '<tr>'+
+          '<td style="max-width:220px;font-size:11px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
+          '<td>'+Number(r.total_pool).toLocaleString()+' pts<br><span style="color:#64748b;font-size:10px">€'+(Number(r.total_pool)/10).toFixed(2)+'</span></td>'+
+          // Fee column: show pts in green, euros in grey below
+          '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts<br><span style="color:#64748b;font-size:10px;font-weight:400">€'+(Number(r.fee_collected)/10).toFixed(2)+'</span></td>'+
+          '<td style="color:#64748b;font-size:11px">'+new Date(r.created_at).toLocaleString()+'</td>'+
+        '</tr>';
+      }).join("");
   };
 
   // ── MARKETS ───────────────────────────────────
@@ -862,9 +898,7 @@ window.addEventListener("load", function () {
     else{var fb2=await db.from("question_submissions").update({status:"rejected"}).eq("id",id);if(fb2.error)showToast("Failed",true);else{showToast("Rejected");loadQuestions();}}
   };
 
-  // ══════════════════════════════════════════════
-  // AI SUGGESTIONS
-  // ══════════════════════════════════════════════
+  // ── AI SUGGESTIONS ────────────────────────────
   window.loadAiSuggestions = async function() {
     var sf=document.getElementById("aiFilter").value;
     var cf=document.getElementById("aiCatFilter").value;
