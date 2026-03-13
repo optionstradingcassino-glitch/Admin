@@ -3,13 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Page title shown in browser tab -->
   <title>My Opinio — Admin</title>
-
-  <!-- Same fonts as the mini app for visual consistency -->
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- Custom heading font loaded from Supabase Storage -->
   <style>
     @font-face {
       font-family: 'Druk Wide';
@@ -19,12 +14,8 @@
       font-display: swap;
     }
   </style>
-
-  <!-- Supabase JS SDK loaded from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
-    /* ── CSS VARIABLES — change colours here ── */
     :root {
       --bg:      #06070b;
       --surface: #0c0e15;
@@ -33,17 +24,16 @@
       --accent2: #3b82f6;
       --green:   #22c55e;
       --red:     #ff3d5a;
+      --yellow:  #f59e0b;
       --text:    #dde0f0;
       --muted:   #485070;
       --font-heading: 'Druk Wide', 'Arial Black', sans-serif;
       --font-body:    'Urbanist', 'Helvetica Neue', sans-serif;
     }
-
-    /* ── RESET & BASE ── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
 
-    /* ── LOGIN SCREEN ── */
+    /* LOGIN */
     #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(ellipse at 50% 40%, #0a1e18 0%, #06070b 70%); }
     .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; width: 360px; text-align: center; }
     .login-box h1 { font-family: var(--font-heading); font-size: 20px; color: var(--accent); margin-bottom: 6px; letter-spacing: 2px; }
@@ -52,39 +42,44 @@
     .login-box input:focus { border-color: var(--accent); }
     #loginError { color: var(--red); font-size: 12px; margin-top: 12px; display: none; }
 
-    /* ── BUTTONS ── */
+    /* BUTTONS */
     .btn { padding: 11px 20px; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
     .btn:hover { opacity: .85; }
     .btn-primary { background: var(--accent); color: #000; width: 100%; }
     .btn-green   { background: var(--green);   color: #000; }
     .btn-blue    { background: var(--accent2);  color: #fff; }
     .btn-ghost   { background: var(--border);   color: var(--text); }
+    .btn-red     { background: var(--red);       color: #fff; }
+    .btn-yellow  { background: var(--yellow);    color: #000; }
 
-    /* ── DASHBOARD LAYOUT ── */
+    /* DASHBOARD */
     #dashboard { display: none; }
     header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
     header h1 { font-family: var(--font-heading); font-size: 16px; color: var(--accent); letter-spacing: 2px; }
     header span { color: var(--muted); font-size: 12px; font-family: var(--font-body); }
 
-    /* ── NAV TABS ── */
+    /* NAV */
     nav { display: flex; gap: 4px; padding: 16px 32px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
     .nav-btn { padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--muted); font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
     .nav-btn:hover  { color: var(--text); background: var(--border); }
     .nav-btn.active { background: var(--accent); color: #000; font-weight: 700; }
+    /* AI tab gets a special glow to stand out */
+    .nav-btn.ai-tab { border: 1px solid rgba(34,192,99,.3); }
+    .nav-btn.ai-tab.active { background: linear-gradient(135deg, #22c063, #3b82f6); color: #000; }
 
-    /* ── MAIN CONTENT AREA ── */
+    /* MAIN */
     main { padding: 32px; max-width: 1400px; margin: 0 auto; }
     .tab { display: none; }
     .tab.active { display: block; }
 
-    /* ── ANALYTICS STAT CARDS ── */
+    /* STATS */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
     .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
     .stat-card .label { color: var(--muted); font-size: 11px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
     .stat-card .value { font-family: var(--font-body); font-size: 22px; font-weight: 700; color: var(--accent); }
     .stat-card .sub   { color: var(--muted); font-size: 11px; margin-top: 4px; }
 
-    /* ── DATA CARDS / TABLES ── */
+    /* CARDS & TABLES */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
     .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .card-header h3 { font-family: var(--font-heading); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
@@ -94,17 +89,24 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255,255,255,.02); }
 
-    /* ── STATUS BADGES ── */
+    /* BADGES */
     .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-    .badge-open    { background: rgba(34,197,94,.15);   color: var(--green); }
-    .badge-closed  { background: rgba(239,68,68,.15);   color: var(--red); }
-    .badge-settled { background: rgba(100,116,139,.15); color: var(--muted); }
-    .badge-yes     { background: rgba(34,197,94,.15);   color: var(--green); }
-    .badge-no      { background: rgba(239,68,68,.15);   color: var(--red); }
-    .badge-admin   { background: rgba(34,192,99,.15);   color: var(--accent); }
-    .badge-user    { background: rgba(100,116,139,.15); color: var(--muted); }
+    .badge-open     { background: rgba(34,197,94,.15);   color: var(--green); }
+    .badge-closed   { background: rgba(239,68,68,.15);   color: var(--red); }
+    .badge-settled  { background: rgba(100,116,139,.15); color: var(--muted); }
+    .badge-yes      { background: rgba(34,197,94,.15);   color: var(--green); }
+    .badge-no       { background: rgba(239,68,68,.15);   color: var(--red); }
+    .badge-admin    { background: rgba(34,192,99,.15);   color: var(--accent); }
+    .badge-user     { background: rgba(100,116,139,.15); color: var(--muted); }
+    .badge-pending  { background: rgba(245,158,11,.15);  color: var(--yellow); }
+    .badge-approved { background: rgba(34,197,94,.15);   color: var(--green); }
+    .badge-rejected { background: rgba(239,68,68,.15);   color: var(--red); }
+    .badge-crypto   { background: rgba(251,191,36,.15);  color: #fbbf24; }
+    .badge-news     { background: rgba(59,130,246,.15);  color: #60a5fa; }
+    .badge-weather  { background: rgba(14,165,233,.15);  color: #38bdf8; }
+    .badge-stocks   { background: rgba(168,85,247,.15);  color: #c084fc; }
 
-    /* ── FORM ELEMENTS ── */
+    /* FORMS */
     .form-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .form-group   { display: flex; flex-direction: column; gap: 8px; }
     .form-group label  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
@@ -112,15 +114,63 @@
     .form-group input:focus { border-color: var(--accent); }
     .form-group.full { grid-column: 1/-1; }
     .form-actions { margin-top: 20px; }
-
-    /* ── MARKET ACTION INPUTS ── */
     .result-select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: var(--font-body); font-size: 12px; cursor: pointer; }
     .adj-input { width: 90px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: var(--font-body); font-size: 13px; }
     .loading { color: var(--muted); font-size: 13px; padding: 24px; text-align: center; }
 
-    /* ── USER DEEP-DIVE PANEL ──
-       Slides in from the right when admin clicks "View" on a user.
-       Shows: stats, deposits, withdrawals, trades, referrals — all in one place. */
+    /* AI SUGGESTIONS SPECIFIC STYLES */
+    /* Summary bar at top of suggestions tab */
+    .ai-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .ai-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+    .ai-stat-val { font-size: 28px; font-weight: 700; color: var(--accent); }
+    .ai-stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    /* Progress bar used for probability / profit scores */
+    .progress-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+
+    /* Suggestion card — each AI suggestion gets its own card */
+    .suggestion-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: border-color .2s;
+    }
+    .suggestion-card:hover { border-color: rgba(34,192,99,.3); }
+    .suggestion-card.approved-card { border-color: rgba(34,197,94,.4); opacity: .6; }
+    .suggestion-card.rejected-card { border-color: rgba(239,68,68,.3);  opacity: .5; }
+
+    /* Top row of each suggestion card */
+    .sc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .sc-question { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; line-height: 1.4; }
+    .sc-badges { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+
+    /* Stats row inside each suggestion card */
+    .sc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .sc-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .sc-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .sc-stat-value { font-size: 14px; font-weight: 700; }
+
+    /* Source data / AI reasoning shown at bottom of card */
+    .sc-reasoning { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; font-style: italic; }
+
+    /* Action buttons row */
+    .sc-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* Edit modal overlay */
+    #editModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 300; align-items: center; justify-content: center; }
+    #editModal.show { display: flex; }
+    .edit-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 560px; max-width: 95vw; }
+    .edit-box h3 { font-family: var(--font-heading); font-size: 13px; color: var(--accent); letter-spacing: 2px; margin-bottom: 20px; }
+    .edit-box textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; resize: vertical; min-height: 80px; }
+    .edit-box textarea:focus { border-color: var(--accent); }
+    .edit-box label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: block; margin-bottom: 6px; margin-top: 16px; }
+    .edit-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; }
+    .edit-actions { display: flex; gap: 8px; margin-top: 20px; }
+
+    /* USER PANEL */
     #panelOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 199; }
     #panelOverlay.show { display: block; }
     #userPanel { position: fixed; top: 0; right: -540px; width: 540px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; transition: right .3s ease; z-index: 200; }
@@ -144,55 +194,63 @@
     .up-row-r  { text-align: right; flex-shrink: 0; font-size: 13px; font-weight: 700; }
     .up-empty  { font-size: 12px; color: var(--muted); text-align: center; padding: 16px 0; }
 
-    /* ── TOAST NOTIFICATION ── */
+    /* TOAST */
     #toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: var(--font-body); display: none; z-index: 999; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .filter-bar select, .filter-bar input {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 6px 10px; font-family: var(--font-body); font-size: 13px; outline: none;
+    }
+
+    /* Trigger button */
+    .trigger-btn {
+      background: linear-gradient(135deg, #22c063, #3b82f6);
+      color: #000; border: none; border-radius: 8px;
+      padding: 10px 20px; font-family: var(--font-body); font-size: 13px;
+      font-weight: 700; cursor: pointer; transition: opacity .15s;
+    }
+    .trigger-btn:hover { opacity: .85; }
+    .trigger-btn:disabled { opacity: .4; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════
-     LOGIN SCREEN — shown before password is entered
-══════════════════════════════════════════════════ -->
+<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
-    <!-- App name shown on login screen -->
     <h1>MY OPINIO</h1>
     <p>Admin Dashboard — Restricted Access</p>
-    <!-- Password field -->
     <input type="password" id="passwordInput" placeholder="Admin password" />
-    <!-- Admin secret used to authorise edge function calls -->
     <input type="hidden" id="adminSecretInput" value="" />
     <button class="btn btn-primary" onclick="login()">LOGIN</button>
     <div id="loginError">Wrong password.</div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     DASHBOARD — shown after successful login
-══════════════════════════════════════════════════ -->
+<!-- DASHBOARD -->
 <div id="dashboard">
-
-  <!-- Top header bar -->
   <header>
     <h1>MY OPINIO ADMIN</h1>
-    <!-- Live UTC clock — ticks every second -->
     <span id="clockDisplay"></span>
   </header>
 
-  <!-- Navigation tabs -->
   <nav>
-    <button class="nav-btn active" onclick="switchTab('analytics',  this)">Analytics</button>
-    <button class="nav-btn"        onclick="switchTab('markets',    this)">Markets</button>
-    <button class="nav-btn"        onclick="switchTab('create',     this)">Create Market</button>
-    <button class="nav-btn"        onclick="switchTab('users',      this)">Users</button>
-    <button class="nav-btn"        onclick="switchTab('ledger',     this)">Ledger</button>
-    <button class="nav-btn"        onclick="switchTab('withdrawals',this)">Withdrawals</button>
-    <button class="nav-btn"        onclick="switchTab('questions',  this)">Questions</button>
+    <button class="nav-btn active"  onclick="switchTab('analytics',   this)">Analytics</button>
+    <button class="nav-btn"         onclick="switchTab('markets',     this)">Markets</button>
+    <button class="nav-btn"         onclick="switchTab('create',      this)">Create Market</button>
+    <button class="nav-btn"         onclick="switchTab('users',       this)">Users</button>
+    <button class="nav-btn"         onclick="switchTab('ledger',      this)">Ledger</button>
+    <button class="nav-btn"         onclick="switchTab('withdrawals', this)">Withdrawals</button>
+    <button class="nav-btn"         onclick="switchTab('questions',   this)">Questions</button>
+    <!-- AI tab has special styling to stand out -->
+    <button class="nav-btn ai-tab"  onclick="switchTab('ai',          this)">🤖 AI Suggestions</button>
   </nav>
 
   <main>
 
-    <!-- ── ANALYTICS TAB ── -->
+    <!-- ANALYTICS TAB -->
     <div class="tab active" id="tab-analytics">
       <div class="stats-grid">
         <div class="stat-card"><div class="label">Total Revenue</div><div class="value" id="statRevenue">—</div><div class="sub">platform fees</div></div>
@@ -213,7 +271,7 @@
       </div>
     </div>
 
-    <!-- ── MARKETS TAB ── -->
+    <!-- MARKETS TAB -->
     <div class="tab" id="tab-markets">
       <div class="card">
         <div class="card-header">
@@ -227,7 +285,7 @@
       </div>
     </div>
 
-    <!-- ── CREATE MARKET TAB ── -->
+    <!-- CREATE MARKET TAB -->
     <div class="tab" id="tab-create">
       <div class="card">
         <div class="card-header"><h3>Create New Market</h3></div>
@@ -249,16 +307,13 @@
       </div>
     </div>
 
-    <!-- ── USERS TAB ── -->
+    <!-- USERS TAB -->
     <div class="tab" id="tab-users">
       <div class="card">
         <div class="card-header">
           <h3>Users &amp; Wallets</h3>
-          <!-- Live search box — filters without hitting the DB again -->
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input type="text" id="userSearch"
-              placeholder="Search username, email, telegram ID..."
-              oninput="filterUsers()"
+            <input type="text" id="userSearch" placeholder="Search username, email..." oninput="filterUsers()"
               style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:var(--font-body);font-size:13px;width:300px;outline:none" />
             <button class="btn btn-ghost" onclick="loadUsers()" style="font-size:12px;padding:6px 12px">Refresh</button>
           </div>
@@ -270,7 +325,7 @@
       </div>
     </div>
 
-    <!-- ── LEDGER TAB ── -->
+    <!-- LEDGER TAB -->
     <div class="tab" id="tab-ledger">
       <div class="card">
         <div class="card-header">
@@ -284,7 +339,7 @@
       </div>
     </div>
 
-    <!-- ── WITHDRAWALS TAB ── -->
+    <!-- WITHDRAWALS TAB -->
     <div class="tab" id="tab-withdrawals">
       <div class="card">
         <div class="card-header">
@@ -307,7 +362,7 @@
       </div>
     </div>
 
-    <!-- ── QUESTIONS TAB ── -->
+    <!-- QUESTIONS TAB -->
     <div class="tab" id="tab-questions">
       <div class="card">
         <div class="card-header">
@@ -329,14 +384,77 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════
+         AI SUGGESTIONS TAB
+         Shows all AI-generated market suggestions.
+         Admin can approve, edit, or reject each one.
+         Approved → moves to markets table and goes live.
+    ══════════════════════════════════════════════════ -->
+    <div class="tab" id="tab-ai">
+
+      <!-- Summary stats at the top -->
+      <div class="ai-summary">
+        <div class="ai-stat">
+          <div class="ai-stat-val" id="aiStatPending">—</div>
+          <div class="ai-stat-lbl">Pending Review</div>
+        </div>
+        <div class="ai-stat">
+          <div class="ai-stat-val" id="aiStatApproved">—</div>
+          <div class="ai-stat-lbl">Approved Today</div>
+        </div>
+        <div class="ai-stat">
+          <div class="ai-stat-val" id="aiStatRejected">—</div>
+          <div class="ai-stat-lbl">Rejected</div>
+        </div>
+        <div class="ai-stat">
+          <div class="ai-stat-val" id="aiStatTotal">—</div>
+          <div class="ai-stat-lbl">Total Generated</div>
+        </div>
+      </div>
+
+      <!-- Controls bar -->
+      <div class="card" style="overflow:visible">
+        <div class="card-header">
+          <h3>AI Market Suggestions</h3>
+          <div class="filter-bar">
+
+            <!-- Filter by status -->
+            <select id="aiFilter" onchange="loadAiSuggestions()">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="all">All</option>
+            </select>
+
+            <!-- Filter by category -->
+            <select id="aiCatFilter" onchange="loadAiSuggestions()">
+              <option value="all">All Categories</option>
+              <option value="crypto">Crypto</option>
+              <option value="news">News</option>
+              <option value="weather">Weather</option>
+              <option value="stocks">Stocks</option>
+            </select>
+
+            <button class="btn btn-ghost" onclick="loadAiSuggestions()" style="font-size:12px;padding:6px 12px">Refresh</button>
+
+            <!-- Manually trigger AI generation right now -->
+            <button class="trigger-btn" id="triggerBtn" onclick="triggerAiGeneration()">
+              ⚡ Generate Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Suggestions list rendered here -->
+        <div style="padding:20px" id="aiSuggestionsList">
+          <div class="loading">Loading suggestions...</div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     USER DEEP-DIVE PANEL
-     Slides in from right when admin clicks "View" on a user.
-     Shows EVERYTHING about that person in one view.
-══════════════════════════════════════════════════ -->
+<!-- USER PANEL -->
 <div id="panelOverlay" onclick="closeUserPanel()"></div>
 <div id="userPanel">
   <div class="up-header">
@@ -348,7 +466,6 @@
     <button class="up-close" onclick="closeUserPanel()">✕</button>
   </div>
   <div class="up-body">
-    <!-- Quick stats strip at the top of the panel -->
     <div class="up-stats">
       <div class="up-stat"><div class="up-stat-v" id="upBalance">—</div><div class="up-stat-l">Balance pts</div></div>
       <div class="up-stat"><div class="up-stat-v" id="upTrades">—</div><div class="up-stat-l">Trades</div></div>
@@ -361,105 +478,99 @@
     <div id="upWdList"><div class="loading">Loading...</div></div>
     <div class="up-sec">Recent Trades (last 20)</div>
     <div id="upTradeList"><div class="loading">Loading...</div></div>
-    <div class="up-sec">Referrals (people they invited)</div>
+    <div class="up-sec">Referrals</div>
     <div id="upRefList"><div class="loading">Loading...</div></div>
   </div>
 </div>
 
-<!-- Toast notification popup (bottom-right corner) -->
+<!-- EDIT SUGGESTION MODAL -->
+<div id="editModal">
+  <div class="edit-box">
+    <h3>EDIT SUGGESTION</h3>
+    <input type="hidden" id="editId" />
+
+    <label>Question</label>
+    <textarea id="editQuestion" rows="3"></textarea>
+
+    <label>Resolution Time</label>
+    <input type="datetime-local" id="editResolution" />
+
+    <label>Admin Notes</label>
+    <textarea id="editNotes" rows="2" placeholder="Optional notes..."></textarea>
+
+    <div class="edit-actions">
+      <button class="btn btn-green"  onclick="saveEdit()">Save & Approve</button>
+      <button class="btn btn-ghost"  onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
-<!-- ══════════════════════════════════════════════════
-     ALL JAVASCRIPT LOGIC
-══════════════════════════════════════════════════ -->
 <script>
 window.addEventListener("load", function () {
 
-  // ── CONFIGURATION ──────────────────────────────────────────────────────────
   var SUPABASE_URL      = "https://liketekvzrazheolmfnj.supabase.co";
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxpa2V0ZWt2enJhemhlb2xtZm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDg0MzYsImV4cCI6MjA4NjgyNDQzNn0.8Zo-NJ0QmaH95zt3Nh4yV20M0HM5OOH9V0cDs1xYpPE";
-
-  // Admin UI password — compared against what the user types on login screen
   var ADMIN_UI_PASSWORD = "Lovemelikeyoudo@1923";
-
-  // Create the Supabase client — used for all database queries
   var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // adminSecret is sent as a header to edge functions to prove we are an admin
   var adminSecret  = "";
-
-  // allUsersData is kept in memory so the live search works without extra DB calls
   var allUsersData = [];
 
   // ── LOGIN ──────────────────────────────────────────────────────────────────
   window.login = function () {
     var pw = document.getElementById("passwordInput").value;
-    // If the password is wrong, show the error message and stop
     if (pw !== ADMIN_UI_PASSWORD) {
       document.getElementById("loginError").style.display = "block";
       return;
     }
-    // Password correct — save it as the admin secret for edge function calls
     adminSecret = pw;
-    // Hide login screen, show dashboard
     document.getElementById("loginScreen").style.display = "none";
     document.getElementById("dashboard").style.display   = "block";
-    // Start the clock and load the first two tabs
     startClock();
     loadAnalytics();
     loadMarkets();
   };
-
-  // Pressing Enter on the password field triggers login
   document.getElementById("passwordInput").addEventListener("keydown", function(e){
     if (e.key === "Enter") window.login();
   });
 
-  // ── LIVE UTC CLOCK ─────────────────────────────────────────────────────────
+  // ── CLOCK ──────────────────────────────────────────────────────────────────
   function startClock() {
-    function tick() {
-      document.getElementById("clockDisplay").innerText = new Date().toUTCString().replace("GMT","UTC");
-    }
-    tick();
-    setInterval(tick, 1000); // update every second
+    function tick() { document.getElementById("clockDisplay").innerText = new Date().toUTCString().replace("GMT","UTC"); }
+    tick(); setInterval(tick, 1000);
   }
 
   // ── TAB SWITCHING ──────────────────────────────────────────────────────────
   window.switchTab = function(name, btn) {
-    // Hide all tab panels and remove active from all nav buttons
     document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
     document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.remove("active"); });
-    // Show chosen tab and highlight its button
     document.getElementById("tab-"+name).classList.add("active");
     btn.classList.add("active");
-    // Load data for whichever tab was just opened
     if(name==="markets")     loadMarkets();
     if(name==="users")       loadUsers();
     if(name==="ledger")      loadLedger();
     if(name==="analytics")   loadAnalytics();
     if(name==="withdrawals") loadWithdrawals();
     if(name==="questions")   loadQuestions();
+    if(name==="ai")          loadAiSuggestions();
   };
 
-  // ── TOAST NOTIFICATIONS ────────────────────────────────────────────────────
-  // Small popup message at the bottom-right of the screen
+  // ── TOAST ──────────────────────────────────────────────────────────────────
   function showToast(msg, isErr) {
     var t = document.getElementById("toast");
     t.innerText = msg;
-    t.style.background = isErr ? "#ef4444" : "#22c063"; // red=error, green=success
+    t.style.background = isErr ? "#ef4444" : "#22c063";
     t.style.color = "#000";
     t.style.display = "block";
-    setTimeout(function(){ t.style.display = "none"; }, 3500); // hide after 3.5s
+    setTimeout(function(){ t.style.display = "none"; }, 3500);
   }
 
   // ── ANALYTICS ──────────────────────────────────────────────────────────────
   window.loadAnalytics = async function() {
-    // Get all market names first so we can show them in the revenue table
     var mr = await db.from("markets").select("id,question");
     var marketMap = {};
     (mr.data||[]).forEach(function(m){ marketMap[m.id] = m.question; });
-
-    // Load all stats at the same time (parallel requests = faster)
     var [rev, trades, users, open, wallets, memberships, tiers, payments] = await Promise.all([
       db.from("platform_revenue").select("fee_collected,total_pool,market_id,created_at"),
       db.from("trades").select("*", {count:"exact", head:true}),
@@ -470,22 +581,16 @@ window.addEventListener("load", function () {
       db.from("membership_tiers").select("id,name,price_eur_cents,bonus_points"),
       db.from("payments").select("amount_eur,points_added")
     ]);
-
     var revenue  = (rev.data||[]);
     var totalFee = revenue.reduce(function(s,r){ return s+Number(r.fee_collected); }, 0);
     var totalVol = revenue.reduce(function(s,r){ return s+Number(r.total_pool); }, 0);
     var wTotal   = (wallets.data||[]).reduce(function(s,w){ return s+Number(w.balance_points); }, 0);
-
-    // Build a lookup map: tier UUID → price in euros
     var tierPriceMap = {};
     (tiers.data||[]).forEach(function(t){ tierPriceMap[t.id] = (t.price_eur_cents||0) / 100; });
-
     var totalDepEur = (payments.data||[]).reduce(function(s,p){ return s+Number(p.amount_eur); }, 0);
     var totalDepPts = (payments.data||[]).reduce(function(s,p){ return s+Number(p.points_added); }, 0);
     var memRevEur   = (memberships.data||[]).reduce(function(s,m){ return s+(tierPriceMap[m.tier_id]||0); }, 0);
     var activeMem   = (memberships.data||[]).filter(function(m){ return m.status==="active"; }).length;
-
-    // Fill in all stat cards
     document.getElementById("statRevenue").innerText  = totalFee.toLocaleString()+" pts (€"+(totalFee/10).toFixed(2)+")";
     document.getElementById("statVolume").innerText   = totalVol.toLocaleString()+" pts (€"+(totalVol/10).toFixed(2)+")";
     document.getElementById("statTrades").innerText   = (trades.count||0).toLocaleString();
@@ -494,59 +599,36 @@ window.addEventListener("load", function () {
     document.getElementById("statWallets").innerText  = wTotal.toLocaleString()+" pts (€"+(wTotal/10).toFixed(2)+")";
     document.getElementById("statMemRev").innerText   = memRevEur > 0
       ? "€"+memRevEur.toFixed(2)+" · "+activeMem+" active"
-      : (memberships.data||[]).length+" memberships (€0 — check RLS on membership_tiers)";
+      : (memberships.data||[]).length+" memberships";
     document.getElementById("statDeposits").innerText = "€"+totalDepEur.toFixed(2)+" ("+totalDepPts.toLocaleString()+" pts)";
-
-    // Fill the revenue-per-market table (most recent first)
     var tbody = document.getElementById("revenueTable");
-    if (!revenue.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="loading">No trading revenue yet</td></tr>';
-      return;
-    }
-    tbody.innerHTML = revenue
-      .sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); })
-      .map(function(r){
-        return '<tr>'+
-          '<td style="max-width:300px;font-size:12px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
-          '<td>'+Number(r.total_pool).toLocaleString()+' pts</td>'+
-          '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts <span style="color:#64748b;font-size:11px">(€'+(Number(r.fee_collected)/10).toFixed(2)+')</span></td>'+
-          '<td style="color:#64748b;font-size:12px">'+new Date(r.created_at).toLocaleString()+'</td>'+
-        '</tr>';
-      }).join("");
+    if (!revenue.length) { tbody.innerHTML = '<tr><td colspan="4" class="loading">No trading revenue yet</td></tr>'; return; }
+    tbody.innerHTML = revenue.sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); }).map(function(r){
+      return '<tr>'+
+        '<td style="max-width:300px;font-size:12px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
+        '<td>'+Number(r.total_pool).toLocaleString()+' pts</td>'+
+        '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts</td>'+
+        '<td style="color:#64748b;font-size:12px">'+new Date(r.created_at).toLocaleString()+'</td>'+
+      '</tr>';
+    }).join("");
   };
 
   // ── MARKETS ────────────────────────────────────────────────────────────────
   window.loadMarkets = async function() {
-    var res     = await db.from("markets").select("*").order("created_at", {ascending:false});
+    var res = await db.from("markets").select("*").order("created_at", {ascending:false});
     var markets = res.data || [];
-    var tbody   = document.getElementById("marketsTable");
-    if (!markets.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">No markets yet</td></tr>';
-      return;
-    }
+    var tbody = document.getElementById("marketsTable");
+    if (!markets.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading">No markets yet</td></tr>'; return; }
     tbody.innerHTML = markets.map(function(m){
-      // Status badge (OPEN / CLOSED / SETTLED)
       var sb = '<span class="badge badge-'+m.status+'">'+m.status.toUpperCase()+'</span>';
-      // Result badge (YES / NO) or dash if not set yet
-      var rb = m.result
-        ? '<span class="badge badge-'+m.result+'">'+m.result.toUpperCase()+'</span>'
-        : '<span style="color:#64748b">—</span>';
-      // Action column — different buttons depending on market state
+      var rb = m.result ? '<span class="badge badge-'+m.result+'">'+m.result.toUpperCase()+'</span>' : '<span style="color:#64748b">—</span>';
       var action = '<span style="color:#64748b;font-size:11px">—</span>';
       if (m.status === "closed" && !m.result) {
-        // ← CLOSED but no result yet: show YES/NO picker + SET button
-        action =
-          '<select class="result-select" id="result-'+m.id+'">'+
-            '<option value="">Set result...</option>'+
-            '<option value="yes">YES</option>'+
-            '<option value="no">NO</option>'+
-          '</select>'+
+        action = '<select class="result-select" id="result-'+m.id+'"><option value="">Set result...</option><option value="yes">YES</option><option value="no">NO</option></select>'+
           '<button class="btn btn-green" style="font-size:11px;padding:4px 10px;margin-left:6px" onclick="setResult(\''+m.id+'\')">SET</button>';
       } else if (m.status === "settled") {
-        // ← Already settled: just show a tick
         action = '<span style="color:#22c55e;font-size:11px">✅ Settled</span>';
       } else if (m.status === "open") {
-        // ← Still open: show Force Close button
         action = '<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="forceCloseMarket(\''+m.id+'\')">Force Close</button>';
       }
       return '<tr>'+
@@ -561,107 +643,54 @@ window.addEventListener("load", function () {
     }).join("");
   };
 
-  // Force-close an open market AND immediately settle it
-  // We ask for YES/NO right here so the market gets settled in one step
   window.forceCloseMarket = async function(id) {
-    // Ask admin to pick a result before closing
-    var result = prompt("Force-close this market.\n\nWhat is the result? Type YES or NO (or Cancel to abort):");
-    if (!result) return; // admin hit Cancel
+    var result = prompt("Force-close this market.\nWhat is the result? Type YES or NO:");
+    if (!result) return;
     result = result.trim().toLowerCase();
-    if (result !== "yes" && result !== "no") {
-      showToast("Invalid — type YES or NO", true);
-      return;
-    }
-
-    showToast("Closing and settling... please wait ⏳");
-
-    // Reset settled flag so the RPC can run even if it got stuck before
+    if (result !== "yes" && result !== "no") { showToast("Invalid — type YES or NO", true); return; }
+    showToast("Closing and settling... ⏳");
     await db.from("markets").update({ status: "closed", settled: false }).eq("id", id);
-
-    // Call admin-force-settle with the result — this pays out winners
     var res = await fetch(SUPABASE_URL+"/functions/v1/admin-force-settle", {
-      method:  "POST",
+      method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
       body: JSON.stringify({ market_id: id, result: result })
     });
-
     var data = await res.json();
-    if (!res.ok) {
-      showToast("Settle failed: "+(data.error||"unknown"), true);
-    } else {
-      // Mark status = settled so admin panel shows it correctly
-      await db.from("markets").update({ status: "settled" }).eq("id", id);
-      showToast("✅ Market force-closed and settled! Winners paid out.");
-    }
+    if (!res.ok) { showToast("Settle failed: "+(data.error||"unknown"), true); }
+    else { await db.from("markets").update({ status: "settled" }).eq("id", id); showToast("✅ Force-closed and settled!"); }
     loadMarkets();
   };
 
-  // ── SET RESULT & IMMEDIATELY SETTLE ────────────────────────────────────────
-  // We send BOTH the result AND the settle call to admin-force-settle.
-  // We do NOT try to update the DB directly — RLS blocks anon key writes on markets.
-  // The edge function uses the service role key which bypasses RLS entirely.
   window.setResult = async function(id) {
-    // Step 1: Read which result the admin picked from the dropdown
-    var sel    = document.getElementById("result-"+id);
+    var sel = document.getElementById("result-"+id);
     var result = sel.value;
-
-    // If nothing was picked, ask again and stop
     if (!result) { showToast("Pick YES or NO first", true); return; }
-
-    // Show loading while we wait
-    showToast("Settling market... please wait ⏳");
-
-    // IMPORTANT FIX: Reset the settlement lock first!
-    // The RPC uses settled=false as a gate. If a previous attempt got stuck
-    // halfway, settled is already true and the RPC silently skips. Reset it.
+    showToast("Settling... ⏳");
     await db.from("markets").update({ settled: false }).eq("id", id);
-
-    // Step 2: Call admin-force-settle — pass BOTH market_id AND result
-    // The edge function will:
-    //   a) set the result on the market row (bypassing RLS)
-    //   b) mark the market as "settled"
-    //   c) pay out all winners
     var res = await fetch(SUPABASE_URL+"/functions/v1/admin-force-settle", {
-      method:  "POST",
-      headers: {
-        "Content-Type":   "application/json",
-        "x-admin-secret": adminSecret
-      },
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
       body: JSON.stringify({ market_id: id, result: result })
     });
-
     var data = await res.json();
-
-    if (!res.ok) {
-      showToast("Settle failed: "+(data.error||"unknown — check Supabase logs"), true);
-    } else {
-      // Also mark status = 'settled' so the admin panel shows it correctly
-      await db.from("markets").update({ status: "settled" }).eq("id", id);
-      showToast("✅ Market settled! Winners paid out.");
-    }
-
+    if (!res.ok) { showToast("Settle failed: "+(data.error||"unknown"), true); }
+    else { await db.from("markets").update({ status: "settled" }).eq("id", id); showToast("✅ Market settled! Winners paid."); }
     loadMarkets();
   };
 
-  // ── CREATE MARKET ──────────────────────────────────────────────────────────
   window.createMarket = async function() {
     var q = document.getElementById("newQuestion").value.trim();
     var c = document.getElementById("newClosesAt").value;
     if (!q) { showToast("Enter a question", true); return; }
     if (!c) { showToast("Set closing time", true); return; }
-
-    // Direct DB insert is blocked by RLS (row-level security).
-    // We call admin-create-market edge function instead — it uses the SERVICE ROLE KEY
-    // which bypasses RLS. The function checks our admin secret first.
     var res = await fetch(SUPABASE_URL+"/functions/v1/admin-create-market", {
-      method:  "POST",
+      method: "POST",
       headers: {"Content-Type":"application/json", "x-admin-secret": adminSecret},
       body: JSON.stringify({question: q, closes_at: new Date(c).toISOString()})
     });
     var data = await res.json();
     if (!res.ok) { showToast("Error: "+(data.error||"unknown"), true); return; }
     showToast("Market created! ✅");
-    // Clear the form
     document.getElementById("newQuestion").value = "";
     document.getElementById("newClosesAt").value = "";
   };
@@ -670,273 +699,143 @@ window.addEventListener("load", function () {
   window.loadUsers = async function() {
     var tbody = document.getElementById("usersTable");
     tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading users...</td></tr>';
-
-    // Try users_admin view first — if it fails (RLS), fall back to raw users table
-    // We keep telegram_id internally for wallet lookups but NEVER show it in the UI
     var ur = await db.from("users_admin").select("telegram_id,username,full_name,email,role,membership_tier,user_group");
     if (ur.error || !ur.data || ur.data.length === 0) {
-      // Fallback: query the raw users table directly
       ur = await db.from("users").select("telegram_id,username,full_name,email,role,membership_tier,user_group");
     }
-
-    // Also load all wallets so we can show balance per user
     var wr = await db.from("wallets").select("telegram_id,balance_points");
-
-    // Build a quick lookup map: telegram_id → balance_points
     var wmap = {};
     (wr.data||[]).forEach(function(w){ wmap[w.telegram_id] = w.balance_points; });
-
-    // Merge wallet balance into each user and keep in memory for fast search
-    allUsersData = (ur.data||[]).map(function(u){
-      return Object.assign({}, u, {balance_points: Number(wmap[u.telegram_id]||0)});
-    });
-
-    if (!allUsersData.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found — check RLS policies on users table</td></tr>';
-      return;
-    }
+    allUsersData = (ur.data||[]).map(function(u){ return Object.assign({}, u, {balance_points: Number(wmap[u.telegram_id]||0)}); });
+    if (!allUsersData.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>'; return; }
     renderUsersTable(allUsersData);
   };
 
-  // Live search — filters the in-memory list, no DB call needed
   window.filterUsers = function() {
     var q = document.getElementById("userSearch").value.toLowerCase().trim();
     if (!q) { renderUsersTable(allUsersData); return; }
     renderUsersTable(allUsersData.filter(function(u){
-      return (u.username||"").toLowerCase().includes(q) ||
-             (u.email||"").toLowerCase().includes(q) ||
-             (u.full_name||"").toLowerCase().includes(q);
+      return (u.username||"").toLowerCase().includes(q) || (u.email||"").toLowerCase().includes(q) || (u.full_name||"").toLowerCase().includes(q);
     }));
   };
 
-  // Escape HTML special chars to prevent XSS
   function esc(s){ return String(s||"").replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
 
   function renderUsersTable(users) {
     var tbody = document.getElementById("usersTable");
-    if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
-      return;
-    }
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>'; return; }
     tbody.innerHTML = users.map(function(u){
-      var bal      = Number(u.balance_points||0).toLocaleString();
-      // Use telegram_id as the internal key for the input ID (hidden from user, just a unique key)
-      var safeKey  = esc(u.telegram_id||u.email||u.username||"");
-      var dispName = u.full_name || (u.username ? '@'+u.username : u.email || '—');
+      var bal = Number(u.balance_points||0).toLocaleString();
+      var safeKey = esc(u.telegram_id||u.email||u.username||"");
       return '<tr>'+
-        // Column 1: Username (main identifier shown to admin)
-        '<td style="font-weight:600">'+
-          (u.username ? '<span style="color:var(--accent)">@'+u.username+'</span>' : '<span style="color:#64748b">—</span>')+
-        '</td>'+
-        // Column 2: Full name
+        '<td style="font-weight:600">'+(u.username ? '<span style="color:var(--accent)">@'+u.username+'</span>' : '<span style="color:#64748b">—</span>')+'</td>'+
         '<td style="font-size:13px">'+(u.full_name||'—')+'</td>'+
-        // Column 3: Email
         '<td style="font-size:12px;color:#94a3b8">'+(u.email||'—')+'</td>'+
-        // Column 4: Role badge
         '<td><span class="badge badge-'+(u.role||'user')+'">'+(u.role||'user').toUpperCase()+'</span></td>'+
-        // Column 5: Group dropdown
         '<td>'+renderGroupSelect(u)+'</td>'+
-        // Column 6: Balance
         '<td style="color:#22c063;font-weight:700">'+bal+' pts</td>'+
-        // Column 7: Adjust balance input
         '<td>'+
           '<input type="number" class="adj-input" id="adj-'+safeKey+'" placeholder="±pts"/>'+
           '<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;margin-left:6px" onclick="adjustBalance(\''+safeKey+'\')">ADJUST</button>'+
         '</td>'+
-        // Column 8: View full profile button
-        '<td>'+
-          '<button class="btn" style="background:#22c063;color:#000;font-size:11px;padding:5px 12px" '+
-          'onclick="openUserPanel(\''+safeKey+'\',\''+esc(u.username||'')+'\',\''+esc(u.email||'')+'\',\''+esc(u.full_name||'')+'\','+u.balance_points+')">'+
-          'View</button>'+
-        '</td>'+
+        '<td><button class="btn" style="background:#22c063;color:#000;font-size:11px;padding:5px 12px" onclick="openUserPanel(\''+safeKey+'\',\''+esc(u.username||'')+'\',\''+esc(u.email||'')+'\',\''+esc(u.full_name||'')+'\','+u.balance_points+')">View</button></td>'+
       '</tr>';
     }).join("");
   }
 
-  // Build the Cassino / UNICAS group dropdown for each row
   function renderGroupSelect(u) {
-    // Use telegram_id as the data key (internal only — not displayed)
-    var key    = esc(u.telegram_id||u.email||u.username||"");
+    var key = esc(u.telegram_id||u.email||u.username||"");
     var isCass = !u.user_group || u.user_group === "cassino";
-    return '<select data-key="'+key+'" onchange="changeUserGroup(this.dataset.key, this.value)" '+
-           'style="background:var(--bg);border:1px solid var(--border);color:var(--text);'+
-           'border-radius:6px;padding:4px 8px;font-family:var(--font-body);font-size:12px;cursor:pointer">'+
-           '<option value="cassino"'+(isCass ? ' selected' : '')+'>🎰 Cassino</option>'+
-           '<option value="unicas"'+(u.user_group === 'unicas' ? ' selected' : '')+'>🎓 UNICAS</option>'+
-           '</select>';
+    return '<select data-key="'+key+'" onchange="changeUserGroup(this.dataset.key, this.value)" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-family:var(--font-body);font-size:12px;cursor:pointer">'+
+      '<option value="cassino"'+(isCass?' selected':'')+'>🎰 Cassino</option>'+
+      '<option value="unicas"'+(u.user_group==='unicas'?' selected':'')+'>🎓 UNICAS</option>'+
+      '</select>';
   }
 
-  // Change a user's group — saves to DB using telegram_id (internal key)
   window.changeUserGroup = async function(key, group) {
-    // Find the user in memory first to get their telegram_id
-    var u = allUsersData.find(function(u){
-      return (u.telegram_id||u.email||u.username||"") === key;
-    });
+    var u = allUsersData.find(function(u){ return (u.telegram_id||u.email||u.username||"") === key; });
     if (!u) { showToast("User not found", true); return; }
     var res = await db.from("users").update({user_group: group}).eq("telegram_id", u.telegram_id);
     if (res.error) { showToast("Error: "+res.error.message, true); return; }
-    showToast("Group updated to "+(group==="unicas" ? "🎓 UNICAS" : "🎰 Cassino"));
-    // Update in-memory data so dropdown stays correct without a full reload
+    showToast("Group updated!");
     u.user_group = group;
   };
 
-  // Add or subtract points from a user's wallet
   window.adjustBalance = async function(key) {
     var inp = document.getElementById("adj-"+key);
     var amt = parseInt(inp.value);
     if (isNaN(amt) || amt === 0) { showToast("Enter e.g. 500 or -100", true); return; }
-
-    // Find the user in memory to get their telegram_id for the wallet lookup
-    var u = allUsersData.find(function(u){
-      return (u.telegram_id||u.email||u.username||"") === key;
-    });
+    var u = allUsersData.find(function(u){ return (u.telegram_id||u.email||u.username||"") === key; });
     if (!u) { showToast("User not found", true); return; }
     var tid = u.telegram_id;
-
-    // Step 1: read current balance
     var wr = await db.from("wallets").select("balance_points").eq("telegram_id", tid).single();
-    if (wr.error) { showToast("Can't find wallet: "+wr.error.message, true); return; }
+    if (wr.error) { showToast("Can't find wallet", true); return; }
     var cur = Number(wr.data.balance_points);
-    var nb  = cur + amt;
-    if (nb < 0) { showToast("Would go negative! Current: "+cur+" pts", true); return; }
-
-    // Step 2: save the new balance
-    var ur2 = await db.from("wallets")
-      .update({balance_points: nb, updated_at: new Date().toISOString()})
-      .eq("telegram_id", tid);
+    var nb = cur + amt;
+    if (nb < 0) { showToast("Would go negative!", true); return; }
+    var ur2 = await db.from("wallets").update({balance_points: nb, updated_at: new Date().toISOString()}).eq("telegram_id", tid);
     if (ur2.error) {
-      // updated_at column might not exist — retry without it
       ur2 = await db.from("wallets").update({balance_points: nb}).eq("telegram_id", tid);
-      if (ur2.error) { showToast("Wallet update failed: "+ur2.error.message, true); return; }
+      if (ur2.error) { showToast("Failed: "+ur2.error.message, true); return; }
     }
-
-    // Step 3: write to the ledger for history (non-critical — might fail due to RLS)
-    var lr = await db.from("wallet_ledger").insert({
-      telegram_id:   tid,
-      amount:        amt,
-      balance_after: nb,
-      type:          "admin_adjust",
-      note:          "Admin manually adjusted "+(amt>0?"+":"")+amt+" pts"
-    });
-    if (lr.error) console.warn("Ledger write failed (RLS?):", lr.error.message);
-
-    showToast("✅ "+(amt>0?"+":"")+amt+" pts — new balance: "+nb.toLocaleString()+" pts");
+    await db.from("wallet_ledger").insert({ telegram_id: tid, amount: amt, balance_after: nb, type: "admin_adjust", note: "Admin adjusted "+(amt>0?"+":"")+amt+" pts" });
+    showToast("✅ "+(amt>0?"+":"")+amt+" pts — new: "+nb.toLocaleString()+" pts");
     inp.value = "";
-    setTimeout(loadUsers, 500); // reload table after a short delay
+    setTimeout(loadUsers, 500);
   };
 
-  // ── USER DEEP-DIVE PANEL ───────────────────────────────────────────────────
-  // Opens a slide-in panel showing everything about one specific user
-  // key = telegram_id (internal), shown fields = username / email / full name
+  // ── USER PANEL ─────────────────────────────────────────────────────────────
   window.openUserPanel = async function(key, username, email, fullName, balPts) {
-    // Find the user in memory so we have their telegram_id for DB queries
-    var u   = allUsersData.find(function(u){ return (u.telegram_id||u.email||u.username||"") === key; });
-    var tid = u ? u.telegram_id : key; // fallback to key if not found
-
-    var displayName = fullName || (username ? "@"+username : email || "Unknown user");
-    // Fill header immediately so it shows something while data loads
+    var u = allUsersData.find(function(u){ return (u.telegram_id||u.email||u.username||"") === key; });
+    var tid = u ? u.telegram_id : key;
+    var displayName = fullName || (username ? "@"+username : email || "Unknown");
     document.getElementById("upAvatar").innerText  = displayName[0].toUpperCase();
     document.getElementById("upName").innerText    = displayName;
-    // Show email as subtitle instead of telegram ID
-    document.getElementById("upSub").innerText     = email || (username ? "@"+username : "No email");
+    document.getElementById("upSub").innerText     = email || "@"+username;
     document.getElementById("upBalance").innerText = Number(balPts).toLocaleString();
-    // Reset all 4 lists to "Loading..."
-    ["upDepList","upWdList","upTradeList","upRefList"].forEach(function(id){
-      document.getElementById(id).innerHTML = '<div class="loading">Loading...</div>';
-    });
-    document.getElementById("upTrades").innerText    = "…";
+    ["upDepList","upWdList","upTradeList","upRefList"].forEach(function(id){ document.getElementById(id).innerHTML = '<div class="loading">Loading...</div>'; });
+    document.getElementById("upTrades").innerText = "…";
     document.getElementById("upDeposited").innerText = "…";
     document.getElementById("upWithdrawn").innerText = "…";
-    // Slide the panel open
     document.getElementById("userPanel").classList.add("open");
     document.getElementById("panelOverlay").classList.add("show");
-
-    // Fetch all 4 data sources at the same time (parallel = fast)
     var [tradesR, depsR, wdsR, refsR] = await Promise.all([
       db.from("trades").select("*").eq("telegram_id",tid).order("created_at",{ascending:false}).limit(20),
       db.from("payments").select("*").eq("telegram_id",tid).order("created_at",{ascending:false}).limit(100),
       db.from("withdrawals").select("*").eq("telegram_id",tid).order("created_at",{ascending:false}).limit(100),
       db.from("referrals").select("*").eq("referrer_id",tid).order("created_at",{ascending:false})
     ]);
-
-    var trades = tradesR.data||[];
-    var deps   = depsR.data||[];
-    var wds    = wdsR.data||[];
-    var refs   = refsR.data||[];
-
-    // Update quick stats strip
-    document.getElementById("upTrades").innerText    = trades.length+(trades.length===20?"+":"");
+    var trades = tradesR.data||[], deps = depsR.data||[], wds = wdsR.data||[], refs = refsR.data||[];
+    document.getElementById("upTrades").innerText = trades.length+(trades.length===20?"+":"");
     var totalDep = deps.filter(function(d){ return d.status==="completed"; }).reduce(function(s,d){ return s+Number(d.amount_eur); }, 0);
     var totalWd  = wds.filter(function(w){ return w.status==="completed"||w.status==="processing"; }).reduce(function(s,w){ return s+Number(w.amount_eur); }, 0);
     document.getElementById("upDeposited").innerText = "€"+totalDep.toFixed(2);
     document.getElementById("upWithdrawn").innerText = "€"+totalWd.toFixed(2);
-
-    // Render deposits list
     document.getElementById("upDepList").innerHTML = deps.length ? deps.map(function(d){
-      var clr = d.status==="completed" ? "#22c063" : d.status==="pending" ? "#f59e0b" : "#ef4444";
-      return '<div class="up-row">'+
-        '<div class="up-row-l">'+
-          '<div class="up-row-t">€'+Number(d.amount_eur||0).toFixed(2)+' deposit</div>'+
-          '<div class="up-row-s">'+new Date(d.created_at).toLocaleDateString("en-GB")+'</div>'+
-        '</div>'+
-        '<div class="up-row-r" style="color:'+clr+'">'+d.status+'</div>'+
-      '</div>';
+      var clr = d.status==="completed"?"#22c063":d.status==="pending"?"#f59e0b":"#ef4444";
+      return '<div class="up-row"><div class="up-row-l"><div class="up-row-t">€'+Number(d.amount_eur||0).toFixed(2)+' deposit</div><div class="up-row-s">'+new Date(d.created_at).toLocaleDateString("en-GB")+'</div></div><div class="up-row-r" style="color:'+clr+'">'+d.status+'</div></div>';
     }).join("") : '<div class="up-empty">No deposits yet</div>';
-
-    // Render withdrawals list
     document.getElementById("upWdList").innerHTML = wds.length ? wds.map(function(w){
-      var clr = w.status==="completed" ? "#22c063" : w.status==="pending" ? "#f59e0b" : "#ef4444";
-      return '<div class="up-row">'+
-        '<div class="up-row-l">'+
-          '<div class="up-row-t">€'+Number(w.amount_eur||0).toFixed(2)+' withdrawal</div>'+
-          '<div class="up-row-s">'+new Date(w.created_at).toLocaleDateString("en-GB")+'</div>'+
-        '</div>'+
-        '<div class="up-row-r" style="color:'+clr+'">'+w.status+'</div>'+
-      '</div>';
+      var clr = w.status==="completed"?"#22c063":w.status==="pending"?"#f59e0b":"#ef4444";
+      return '<div class="up-row"><div class="up-row-l"><div class="up-row-t">€'+Number(w.amount_eur||0).toFixed(2)+' withdrawal</div><div class="up-row-s">'+new Date(w.created_at).toLocaleDateString("en-GB")+'</div></div><div class="up-row-r" style="color:'+clr+'">'+w.status+'</div></div>';
     }).join("") : '<div class="up-empty">No withdrawals yet</div>';
-
-    // Render trades list
     document.getElementById("upTradeList").innerHTML = trades.length ? trades.map(function(t){
-      var won  = t.status==="won";
-      var lost = t.status==="lost";
-      var clr  = won ? "#22c55e" : lost ? "#ef4444" : "#22c063";
-      var pay  = won ? "+"+Number(t.payout_points).toLocaleString()+" pts" : lost ? "Lost" : "Pending";
-      return '<div class="up-row">'+
-        '<div class="up-row-l">'+
-          '<div class="up-row-t">'+(t.question||"Market")+'</div>'+
-          '<div class="up-row-s">'+t.option+' · '+Number(t.amount_points).toLocaleString()+' pts · '+new Date(t.created_at).toLocaleDateString("en-GB")+'</div>'+
-        '</div>'+
-        '<div class="up-row-r" style="color:'+clr+'">'+pay+'</div>'+
-      '</div>';
+      var won=t.status==="won", lost=t.status==="lost";
+      var clr=won?"#22c55e":lost?"#ef4444":"#22c063";
+      var pay=won?"+"+Number(t.payout_points).toLocaleString()+" pts":lost?"Lost":"Pending";
+      return '<div class="up-row"><div class="up-row-l"><div class="up-row-t">'+(t.question||"Market")+'</div><div class="up-row-s">'+t.option+' · '+Number(t.amount_points).toLocaleString()+' pts · '+new Date(t.created_at).toLocaleDateString("en-GB")+'</div></div><div class="up-row-r" style="color:'+clr+'">'+pay+'</div></div>';
     }).join("") : '<div class="up-empty">No trades yet</div>';
-
-    // Render referrals list
-    if (!refs.length) {
-      document.getElementById("upRefList").innerHTML = '<div class="up-empty">No referrals made</div>';
-    } else {
+    if (!refs.length) { document.getElementById("upRefList").innerHTML = '<div class="up-empty">No referrals</div>'; }
+    else {
       var completed = refs.filter(function(r){ return r.status==="completed"; }).length;
       document.getElementById("upRefList").innerHTML =
-        '<div style="font-size:12px;color:#22c063;font-weight:700;margin-bottom:10px">'+
-          completed+' completed · '+(completed*100)+' pts earned'+
-        '</div>'+
+        '<div style="font-size:12px;color:#22c063;font-weight:700;margin-bottom:10px">'+completed+' completed · '+(completed*100)+' pts earned</div>'+
         refs.map(function(r){
-          var active   = r.status==="completed";
-          var rewarded = r.referrer_rewarded===true;
-          return '<div class="up-row">'+
-            '<div class="up-row-l">'+
-              '<div class="up-row-t">'+(r.referee_username ? "@"+r.referee_username : "User …"+String(r.referee_id).slice(-4))+'</div>'+
-              '<div class="up-row-s">'+new Date(r.created_at).toLocaleDateString("en-GB")+'</div>'+
-            '</div>'+
-            '<div class="up-row-r">'+
-              '<span style="font-size:11px;font-weight:700;color:'+(active?"#22c55e":"#64748b")+'">'+(active?"Active":"Pending")+'</span>'+
-              (rewarded ? ' <span style="font-size:10px;color:#22c063">+100 pts</span>' : '')+
-            '</div>'+
-          '</div>';
+          return '<div class="up-row"><div class="up-row-l"><div class="up-row-t">'+(r.referee_username?"@"+r.referee_username:"User …"+String(r.referee_id).slice(-4))+'</div><div class="up-row-s">'+new Date(r.created_at).toLocaleDateString("en-GB")+'</div></div><div class="up-row-r"><span style="font-size:11px;font-weight:700;color:'+(r.status==="completed"?"#22c55e":"#64748b")+'">'+(r.status==="completed"?"Active":"Pending")+'</span></div></div>';
         }).join("");
     }
   };
 
-  // Close the user deep-dive panel
   window.closeUserPanel = function() {
     document.getElementById("userPanel").classList.remove("open");
     document.getElementById("panelOverlay").classList.remove("show");
@@ -946,13 +845,9 @@ window.addEventListener("load", function () {
   window.loadLedger = async function() {
     var tbody = document.getElementById("ledgerTable");
     tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
-    var res  = await db.from("wallet_ledger").select("*").order("created_at",{ascending:false}).limit(100);
+    var res = await db.from("wallet_ledger").select("*").order("created_at",{ascending:false}).limit(100);
     var data = res.data || [];
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading">No ledger entries yet</td></tr>';
-      return;
-    }
-    // Colour each entry type differently
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="loading">No entries yet</td></tr>'; return; }
     var typeColors = { trade:"#3b82f6", payout:"#22c55e", deposit:"#22c063", withdrawal:"#ef4444", admin_adjust:"#f59e0b" };
     tbody.innerHTML = data.map(function(e){
       var clr = typeColors[e.type] || "#64748b";
@@ -970,31 +865,24 @@ window.addEventListener("load", function () {
   // ── WITHDRAWALS ────────────────────────────────────────────────────────────
   window.loadWithdrawals = async function() {
     var filter = document.getElementById("wdFilter").value;
-    var tbody  = document.getElementById("wdTable");
+    var tbody = document.getElementById("wdTable");
     tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading...</td></tr>';
     var query = db.from("withdrawals").select("*").order("created_at",{ascending:false}).limit(200);
     if (filter !== "all") query = query.eq("status", filter);
-    var res  = await query;
+    var res = await query;
     var data = res.data || [];
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px">None found</td></tr>';
-      return;
-    }
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px">None found</td></tr>'; return; }
     var sc = {pending:"#f59e0b", processing:"#3b82f6", completed:"#22c55e", rejected:"#ef4444"};
     tbody.innerHTML = data.map(function(w){
-      var clr     = sc[w.status] || "#64748b";
+      var clr = sc[w.status] || "#64748b";
       var actions = "";
       if (w.status === "pending") {
-        actions =
-          '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" onclick=\'processWd("'+w.id+'","approve")\'>Approve</button>'+
+        actions = '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" onclick=\'processWd("'+w.id+'","approve")\'>Approve</button>'+
           '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" onclick=\'processWd("'+w.id+'","reject")\'>Reject</button>';
       } else if (w.status === "processing") {
-        actions =
-          '<button class="btn" style="background:#3b82f6;color:#fff;font-size:11px;padding:5px 10px;margin-right:4px" onclick=\'processWd("'+w.id+'","complete")\'>Complete</button>'+
+        actions = '<button class="btn" style="background:#3b82f6;color:#fff;font-size:11px;padding:5px 10px;margin-right:4px" onclick=\'processWd("'+w.id+'","complete")\'>Complete</button>'+
           '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" onclick=\'processWd("'+w.id+'","reject")\'>Reject</button>';
-      } else {
-        actions = '<span style="color:#64748b;font-size:11px">'+(w.admin_note||'—')+'</span>';
-      }
+      } else { actions = '<span style="color:#64748b;font-size:11px">'+(w.admin_note||'—')+'</span>'; }
       return '<tr>'+
         '<td style="color:#64748b;font-size:12px">'+new Date(w.created_at).toLocaleString()+'</td>'+
         '<td style="font-size:12px">'+w.telegram_id+'</td>'+
@@ -1007,21 +895,17 @@ window.addEventListener("load", function () {
     }).join("");
   };
 
-  // Approve, reject, or complete a withdrawal via the edge function
   window.processWd = async function(id, action) {
     var note = "";
     if (action === "reject")   note = prompt("Rejection reason:")||"";
-    if (action === "complete") note = prompt("Add reference note:")||"";
+    if (action === "complete") note = prompt("Reference note:")||"";
     var res = await fetch(SUPABASE_URL+"/functions/v1/process-withdrawal", {
-      method:  "POST",
+      method: "POST",
       headers: {"Content-Type":"application/json", "x-admin-secret": adminSecret},
       body: JSON.stringify({withdrawal_id: id, action: action, admin_note: note})
     });
     var data = await res.json();
-    if (!res.ok) {
-      alert(res.status===401 ? "Unauthorized — wrong secret." : "Error: "+(data.error||"unknown"));
-      return;
-    }
+    if (!res.ok) { alert(res.status===401?"Unauthorized.":"Error: "+(data.error||"unknown")); return; }
     showToast(data.message||"Done!");
     loadWithdrawals();
   };
@@ -1029,29 +913,22 @@ window.addEventListener("load", function () {
   // ── QUESTIONS ──────────────────────────────────────────────────────────────
   window.loadQuestions = async function() {
     var filter = document.getElementById("qFilter").value;
-    var tbody  = document.getElementById("qTable");
+    var tbody = document.getElementById("qTable");
     tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
     var query = db.from("question_submissions").select("*").order("created_at",{ascending:false}).limit(200);
     if (filter !== "all") query = query.eq("status", filter);
-    var res  = await query;
+    var res = await query;
     var data = res.data;
-    if (res.error || !data || !data.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px">None found</td></tr>';
-      return;
-    }
+    if (res.error || !data || !data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px">None found</td></tr>'; return; }
     var sc = {pending:"#f59e0b", approved:"#22c55e", rejected:"#ef4444"};
     tbody.innerHTML = data.map(function(q){
       var clr = sc[q.status] || "#64748b";
       var ctx = q.context ? '<span style="color:#64748b;font-size:11px">'+q.context.slice(0,80)+'</span>' : '—';
       var actions = "";
       if (q.status === "pending") {
-        actions =
-          '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" onclick=\'reviewQuestion("'+q.id+'","approve")\'>Approve</button>'+
+        actions = '<button class="btn" style="background:#22c55e;color:#000;font-size:11px;padding:5px 10px;margin-right:4px" onclick=\'reviewQuestion("'+q.id+'","approve")\'>Approve</button>'+
           '<button class="btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 10px" onclick=\'reviewQuestion("'+q.id+'","reject")\'>Reject</button>';
-      } else {
-        var rn = q.refunded ? ' <span style="color:#22c55e;font-size:10px">(refunded)</span>' : "";
-        actions = '<span style="color:#64748b;font-size:11px">'+q.status+rn+'</span>';
-      }
+      } else { actions = '<span style="color:#64748b;font-size:11px">'+q.status+'</span>'; }
       return '<tr>'+
         '<td style="color:#64748b;font-size:12px">'+new Date(q.created_at).toLocaleString()+'</td>'+
         '<td style="font-size:12px">'+q.telegram_id+'</td>'+
@@ -1063,68 +940,341 @@ window.addEventListener("load", function () {
     }).join("");
   };
 
-  // Approve or reject a submitted question
-  // If the edge function fails, we fall back to a direct DB approve so admin isn't blocked
   window.reviewQuestion = async function(id, action) {
     var closesAt = "";
     if (action === "approve") {
-      closesAt = prompt("Close date? (leave blank = 7 days from now)\nFormat: 2026-12-31T23:59:00");
-      if (closesAt === null) return; // admin pressed Cancel
-      if (!closesAt.trim()) {
-        var d = new Date();
-        d.setDate(d.getDate() + 7);
-        closesAt = d.toISOString();
-      }
+      closesAt = prompt("Close date? (blank = 7 days)\nFormat: 2026-12-31T23:59:00");
+      if (closesAt === null) return;
+      if (!closesAt.trim()) { var d = new Date(); d.setDate(d.getDate()+7); closesAt = d.toISOString(); }
     }
-
-    // Try the edge function first (creates market + updates submission status)
     var res = await fetch(SUPABASE_URL+"/functions/v1/review-question", {
-      method:  "POST",
+      method: "POST",
       headers: {"Content-Type":"application/json", "x-admin-secret": adminSecret},
       body: JSON.stringify({submission_id: id, action: action, closes_at: closesAt})
     });
     var data = await res.json();
-
-    if (res.ok) {
-      // Edge function worked perfectly
-      showToast(action==="approve" ? "✅ Approved — market created!" : "Rejected & refunded");
-      loadQuestions();
-      return;
-    }
-
-    // Edge function failed — show the exact error
-    console.error("review-question error:", res.status, data);
-
-    if (res.status === 401) {
-      showToast("❌ Unauthorized — admin secret mismatch. Check edge function env vars.", true);
-      return;
-    }
-
-    // Fallback for approve: if edge function fails but it's not an auth error,
-    // directly mark the submission as approved in the DB so admin isn't stuck
+    if (res.ok) { showToast(action==="approve"?"✅ Approved!":"Rejected"); loadQuestions(); return; }
+    if (res.status === 401) { showToast("❌ Unauthorized", true); return; }
     if (action === "approve") {
-      var confirm_fallback = confirm(
-        "Edge function failed: " + (data.error||"unknown error") + "\n\n" +
-        "Fallback: mark as approved in DB and create market manually?\n(The market won't be auto-created but the submission will be approved)"
-      );
-      if (confirm_fallback) {
+      if (confirm("Edge function failed: "+(data.error||"unknown")+"\n\nMark as approved in DB only?")) {
         var fb = await db.from("question_submissions").update({status:"approved"}).eq("id", id);
-        if (fb.error) {
-          showToast("Fallback also failed: "+fb.error.message, true);
-        } else {
-          showToast("Marked approved in DB. Create market manually in Create Market tab.", false);
-          loadQuestions();
-        }
+        if (fb.error) { showToast("Fallback failed", true); }
+        else { showToast("Marked approved (DB only)"); loadQuestions(); }
       }
     } else {
-      // Fallback for reject: just update status in DB
       var fb2 = await db.from("question_submissions").update({status:"rejected"}).eq("id", id);
-      if (fb2.error) {
-        showToast("Failed: "+(data.error||fb2.error.message), true);
-      } else {
-        showToast("Rejected (DB fallback)");
-        loadQuestions();
-      }
+      if (fb2.error) { showToast("Failed", true); } else { showToast("Rejected"); loadQuestions(); }
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // AI SUGGESTIONS — all the logic for the new tab
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Load all suggestions from market_suggestions table
+  window.loadAiSuggestions = async function() {
+    var statusFilter = document.getElementById("aiFilter").value;
+    var catFilter    = document.getElementById("aiCatFilter").value;
+    var container    = document.getElementById("aiSuggestionsList");
+    container.innerHTML = '<div class="loading">Loading suggestions...</div>';
+
+    // Build query
+    var query = db.from("market_suggestions").select("*").order("created_at", {ascending: false}).limit(100);
+    if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    if (catFilter !== "all")    query = query.eq("category", catFilter);
+
+    var res = await query;
+    var suggestions = res.data || [];
+
+    // Also load total counts for the summary stats at the top
+    var [pendingR, approvedR, rejectedR, totalR] = await Promise.all([
+      db.from("market_suggestions").select("*", {count:"exact", head:true}).eq("status","pending"),
+      db.from("market_suggestions").select("*", {count:"exact", head:true}).eq("status","approved"),
+      db.from("market_suggestions").select("*", {count:"exact", head:true}).eq("status","rejected"),
+      db.from("market_suggestions").select("*", {count:"exact", head:true})
+    ]);
+
+    document.getElementById("aiStatPending").innerText  = pendingR.count  || 0;
+    document.getElementById("aiStatApproved").innerText = approvedR.count || 0;
+    document.getElementById("aiStatRejected").innerText = rejectedR.count || 0;
+    document.getElementById("aiStatTotal").innerText    = totalR.count    || 0;
+
+    if (!suggestions.length) {
+      container.innerHTML = '<div class="loading">No suggestions found. Click "Generate Now" to create some!</div>';
+      return;
+    }
+
+    // Render each suggestion as a card
+    container.innerHTML = suggestions.map(function(s) {
+      return renderSuggestionCard(s);
+    }).join("");
+  };
+
+  // Build the HTML for a single suggestion card
+  function renderSuggestionCard(s) {
+    var probYes    = Math.round((s.probability_yes    || 0.5) * 100);
+    var probNo     = Math.round((s.probability_no     || 0.5) * 100);
+    var profitProb = Math.round((s.profit_probability || 0.5) * 100);
+    var virality   = s.virality_score || 0;
+
+    // Color of the profit bar: red < 40, yellow < 70, green >= 70
+    var profitColor = profitProb >= 70 ? "#22c55e" : profitProb >= 40 ? "#f59e0b" : "#ef4444";
+    var viralColor  = virality   >= 70 ? "#22c55e" : virality   >= 40 ? "#f59e0b" : "#ef4444";
+
+    // Dimmed card if already reviewed
+    var cardClass = s.status === "approved" ? "suggestion-card approved-card" :
+                    s.status === "rejected" ? "suggestion-card rejected-card" : "suggestion-card";
+
+    // Status badge
+    var statusBadge = '<span class="badge badge-'+s.status+'">'+s.status.toUpperCase()+'</span>';
+
+    // Category badge
+    var catBadge = '<span class="badge badge-'+(s.category||"crypto")+'">'+(s.category||"crypto").toUpperCase()+'</span>';
+
+    // Source badge
+    var sourceBadge = '<span style="font-size:11px;color:var(--muted);background:var(--border);padding:3px 8px;border-radius:4px;">'+s.source_api+'</span>';
+
+    // Resolution time
+    var resTime = s.resolution_time ? new Date(s.resolution_time).toLocaleString() : "—";
+
+    // Action buttons — only show approve/edit/reject for pending
+    var actions = "";
+    if (s.status === "pending") {
+      actions =
+        '<button class="btn btn-green" style="font-size:12px;padding:7px 16px" onclick="approveSuggestion(\''+s.id+'\')">✅ Approve</button>'+
+        '<button class="btn btn-yellow" style="font-size:12px;padding:7px 16px" onclick="openEditModal(\''+s.id+'\')">✏️ Edit</button>'+
+        '<button class="btn btn-red" style="font-size:12px;padding:7px 16px" onclick="rejectSuggestion(\''+s.id+'\')">✕ Reject</button>';
+    } else if (s.status === "approved") {
+      actions = '<span style="color:#22c55e;font-size:13px;font-weight:700">✅ Approved — Live in markets</span>';
+    } else {
+      actions = '<span style="color:#ef4444;font-size:13px;font-weight:700">✕ Rejected</span>';
+    }
+
+    return '<div class="'+cardClass+'" id="card-'+s.id+'">'+
+
+      // Header: question + badges
+      '<div class="sc-header">'+
+        '<div class="sc-question">'+s.question+'</div>'+
+        '<div class="sc-badges">'+statusBadge+catBadge+sourceBadge+'</div>'+
+      '</div>'+
+
+      // Stats grid
+      '<div class="sc-stats">'+
+
+        // YES probability
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">YES Probability</div>'+
+          '<div class="sc-stat-value" style="color:#22c55e">'+probYes+'%</div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+probYes+'%;background:#22c55e"></div></div>'+
+        '</div>'+
+
+        // NO probability
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">NO Probability</div>'+
+          '<div class="sc-stat-value" style="color:#ef4444">'+probNo+'%</div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+probNo+'%;background:#ef4444"></div></div>'+
+        '</div>'+
+
+        // Profit probability
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">Profit Score</div>'+
+          '<div class="sc-stat-value" style="color:'+profitColor+'">'+profitProb+'%</div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+profitProb+'%;background:'+profitColor+'"></div></div>'+
+        '</div>'+
+
+        // Virality score
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">Virality Score</div>'+
+          '<div class="sc-stat-value" style="color:'+viralColor+'">'+virality+'/100</div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+virality+'%;background:'+viralColor+'"></div></div>'+
+        '</div>'+
+
+        // Expected volume
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">Expected Volume</div>'+
+          '<div class="sc-stat-value" style="color:var(--accent)">'+(s.expected_volume||0).toLocaleString()+' pts</div>'+
+        '</div>'+
+
+        // Expected profit
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">Expected Profit</div>'+
+          '<div class="sc-stat-value" style="color:var(--accent)">'+(s.expected_profit||0).toLocaleString()+' pts</div>'+
+        '</div>'+
+
+        // Resolution time
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">Resolves At</div>'+
+          '<div class="sc-stat-value" style="font-size:12px;color:var(--text)">'+resTime+'</div>'+
+        '</div>'+
+
+        // Created at
+        '<div class="sc-stat">'+
+          '<div class="sc-stat-label">Generated</div>'+
+          '<div class="sc-stat-value" style="font-size:12px;color:var(--muted)">'+new Date(s.created_at).toLocaleString()+'</div>'+
+        '</div>'+
+
+      '</div>'+
+
+      // AI reasoning
+      (s.admin_notes ? '<div class="sc-reasoning">💡 AI reasoning: '+s.admin_notes+'</div>' : '')+
+
+      // Action buttons
+      '<div class="sc-actions">'+actions+'</div>'+
+
+    '</div>';
+  }
+
+  // ── APPROVE suggestion → create market and mark approved ──────────────────
+  window.approveSuggestion = async function(id) {
+    showToast("Approving... ⏳");
+
+    // Get the suggestion data
+    var res = await db.from("market_suggestions").select("*").eq("id", id).single();
+    if (res.error || !res.data) { showToast("Failed to load suggestion", true); return; }
+    var s = res.data;
+
+    // Create the market using the admin-create-market edge function
+    var marketRes = await fetch(SUPABASE_URL+"/functions/v1/admin-create-market", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+      body: JSON.stringify({
+        question:   s.question,
+        closes_at:  s.resolution_time,
+        source_api: s.source_api,
+        auto_generated: true
+      })
+    });
+
+    var marketData = await marketRes.json();
+    if (!marketRes.ok) {
+      showToast("Failed to create market: "+(marketData.error||"unknown"), true);
+      return;
+    }
+
+    // Mark suggestion as approved + store reference to the created market
+    await db.from("market_suggestions")
+      .update({
+        status:      "approved",
+        reviewed_at: new Date().toISOString(),
+        admin_notes: (s.admin_notes||"") + " | Approved by admin"
+      })
+      .eq("id", id);
+
+    showToast("✅ Approved! Market is now live.");
+    loadAiSuggestions();
+    loadMarkets(); // refresh markets tab too
+  };
+
+  // ── REJECT suggestion ─────────────────────────────────────────────────────
+  window.rejectSuggestion = async function(id) {
+    var reason = prompt("Reason for rejection? (optional)");
+    if (reason === null) return; // admin cancelled
+
+    await db.from("market_suggestions")
+      .update({
+        status:      "rejected",
+        reviewed_at: new Date().toISOString(),
+        admin_notes: reason || "Rejected by admin"
+      })
+      .eq("id", id);
+
+    showToast("Rejected.");
+    loadAiSuggestions();
+  };
+
+  // ── OPEN EDIT MODAL ───────────────────────────────────────────────────────
+  window.openEditModal = async function(id) {
+    var res = await db.from("market_suggestions").select("*").eq("id", id).single();
+    if (res.error || !res.data) { showToast("Failed to load suggestion", true); return; }
+    var s = res.data;
+
+    document.getElementById("editId").value = id;
+    document.getElementById("editQuestion").value = s.question || "";
+    document.getElementById("editNotes").value = s.admin_notes || "";
+
+    // Convert resolution_time to datetime-local format
+    if (s.resolution_time) {
+      var dt = new Date(s.resolution_time);
+      // datetime-local needs format: 2026-03-13T14:30
+      var local = new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      document.getElementById("editResolution").value = local;
+    }
+
+    document.getElementById("editModal").classList.add("show");
+  };
+
+  window.closeEditModal = function() {
+    document.getElementById("editModal").classList.remove("show");
+  };
+
+  // Close modal if clicking outside the box
+  document.getElementById("editModal").addEventListener("click", function(e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  // ── SAVE EDIT → then approve ──────────────────────────────────────────────
+  window.saveEdit = async function() {
+    var id       = document.getElementById("editId").value;
+    var question = document.getElementById("editQuestion").value.trim();
+    var resTime  = document.getElementById("editResolution").value;
+    var notes    = document.getElementById("editNotes").value.trim();
+
+    if (!question) { showToast("Question cannot be empty", true); return; }
+
+    // Save edits to suggestion
+    await db.from("market_suggestions")
+      .update({
+        question:        question,
+        resolution_time: resTime ? new Date(resTime).toISOString() : undefined,
+        admin_notes:     notes
+      })
+      .eq("id", id);
+
+    closeEditModal();
+    showToast("Saved! Now approving... ⏳");
+
+    // Then approve it
+    await window.approveSuggestion(id);
+  };
+
+  // ── TRIGGER AI GENERATION MANUALLY ───────────────────────────────────────
+  // Calls both fetch-trends and generate-markets back to back
+  window.triggerAiGeneration = async function() {
+    var btn = document.getElementById("triggerBtn");
+    btn.disabled = true;
+    btn.innerText = "⏳ Fetching trends...";
+    showToast("Step 1/2: Fetching fresh data from APIs...");
+
+    try {
+      // Step 1: fetch new trend events
+      var fetchRes = await fetch(SUPABASE_URL+"/functions/v1/fetch-trends", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    "{}"
+      });
+      var fetchData = await fetchRes.json();
+      console.log("fetch-trends result:", fetchData);
+
+      btn.innerText = "⏳ Generating questions...";
+      showToast("Step 2/2: AI is generating market questions...");
+
+      // Step 2: generate market suggestions from trend events
+      var genRes = await fetch(SUPABASE_URL+"/functions/v1/generate-markets", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    "{}"
+      });
+      var genData = await genRes.json();
+      console.log("generate-markets result:", genData);
+
+      showToast("✅ Done! "+( genData.suggestions_created||0)+" new suggestions created.");
+      loadAiSuggestions();
+
+    } catch (err) {
+      showToast("Error: "+err.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "⚡ Generate Now";
     }
   };
 
