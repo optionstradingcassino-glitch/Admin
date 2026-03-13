@@ -1247,11 +1247,21 @@ window.addEventListener("load", function () {
 
     try {
       // Step 1: fetch new trend events
+      // Pass admin secret so the edge function knows we are authorized
       var fetchRes = await fetch(SUPABASE_URL+"/functions/v1/fetch-trends", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    "{}"
+        headers: {
+          "Content-Type":   "application/json",
+          "x-admin-secret": adminSecret
+        },
+        body: "{}"
       });
+
+      if (!fetchRes.ok) {
+        var fetchErr = await fetchRes.json().catch(function(){ return {}; });
+        throw new Error("fetch-trends failed: " + (fetchErr.error || fetchRes.status));
+      }
+
       var fetchData = await fetchRes.json();
       console.log("fetch-trends result:", fetchData);
 
@@ -1259,19 +1269,30 @@ window.addEventListener("load", function () {
       showToast("Step 2/2: AI is generating market questions...");
 
       // Step 2: generate market suggestions from trend events
+      // Pass admin secret here too
       var genRes = await fetch(SUPABASE_URL+"/functions/v1/generate-markets", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    "{}"
+        headers: {
+          "Content-Type":   "application/json",
+          "x-admin-secret": adminSecret
+        },
+        body: "{}"
       });
+
+      if (!genRes.ok) {
+        var genErr = await genRes.json().catch(function(){ return {}; });
+        throw new Error("generate-markets failed: " + (genErr.error || genRes.status));
+      }
+
       var genData = await genRes.json();
       console.log("generate-markets result:", genData);
 
-      showToast("✅ Done! "+( genData.suggestions_created||0)+" new suggestions created.");
+      showToast("✅ Done! " + (genData.suggestions_created || 0) + " new suggestions created.");
       loadAiSuggestions();
 
     } catch (err) {
-      showToast("Error: "+err.message, true);
+      showToast("Error: " + err.message, true);
+      console.error(err);
     } finally {
       btn.disabled = false;
       btn.innerText = "⚡ Generate Now";
