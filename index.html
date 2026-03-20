@@ -12,7 +12,10 @@
       font-weight: 700; font-style: normal; font-display: swap;
     }
   </style>
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js — draws all the analytics charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ── DESIGN TOKENS ─────────────────────────── */
     :root {
@@ -69,7 +72,6 @@
     .nav-btn.active { background:var(--accent); color:#000; font-weight:700; }
     .nav-btn.ai-tab { border:1px solid rgba(34,192,99,.3); }
     .nav-btn.ai-tab.active { background:linear-gradient(135deg,#22c063,#3b82f6); color:#000; }
-    /* Red badge on nav tab */
     .nav-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--red); color:#fff; font-size:10px; font-weight:800; border-radius:99px; min-width:17px; height:17px; padding:0 4px; margin-left:4px; vertical-align:middle; }
     @media(min-width:768px){ nav { padding:10px 20px; gap:4px; } .nav-btn { font-size:13px; padding:8px 14px; } }
 
@@ -88,7 +90,6 @@
     .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; }
     .stat-card .label { color:var(--muted); font-size:10px; margin-bottom:5px; text-transform:uppercase; letter-spacing:1px; }
     .stat-card .value { font-size:17px; font-weight:700; color:var(--accent); line-height:1.2; word-break:break-all; }
-    /* ── The euro line shown below the points value ── */
     .stat-card .value .euro-sub { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:3px; }
     .stat-card .sub   { color:var(--muted); font-size:10px; margin-top:3px; }
     @media(min-width:768px){ .stat-card { padding:18px; } .stat-card .value { font-size:20px; } }
@@ -99,6 +100,42 @@
     .card-header h3 { font-family:var(--font-h); font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
     @media(min-width:768px){ .card-header { padding:14px 18px; } .card-header h3 { font-size:10px; } }
 
+    /* ── CHARTS SECTION ─────────────────────────── */
+    /* Two-column grid for charts on wide screens, single column on mobile */
+    .charts-grid { display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px; }
+    @media(min-width:768px){ .charts-grid { grid-template-columns:1fr 1fr; } }
+
+    /* A chart card — same look as .card but with padding built in */
+    .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+    .chart-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:6px; }
+    .chart-title { font-family:var(--font-h); font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+    /* The mode toggle buttons inside chart headers (Volume / Fee etc.) */
+    .chart-toggle { display:flex; gap:4px; }
+    .chart-toggle button { background:var(--border); border:none; border-radius:5px; padding:4px 10px; color:var(--muted); font-family:var(--font-b); font-size:10px; font-weight:700; cursor:pointer; transition:all .15s; }
+    .chart-toggle button.on { background:var(--accent); color:#000; }
+
+    /* Donut + legend side-by-side layout */
+    .donut-wrap { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    .donut-canvas-wrap { position:relative; width:160px; height:160px; flex-shrink:0; margin:0 auto; }
+    /* The number shown in the donut hole centre */
+    .donut-centre { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+    .donut-centre-val { font-family:var(--font-b); font-size:16px; font-weight:700; color:var(--accent); }
+    .donut-centre-lbl { font-size:9px; color:var(--muted); margin-top:2px; }
+
+    /* Legend rows beneath / beside donut */
+    .chart-legend { flex:1; min-width:120px; display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; }
+    .legend-row { display:flex; align-items:center; gap:7px; font-size:11px; }
+    .legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .legend-label { flex:1; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .legend-val { color:var(--accent); font-weight:700; white-space:nowrap; }
+    .legend-pct { color:var(--muted); font-size:10px; white-space:nowrap; min-width:32px; text-align:right; }
+
+    /* Summary row of tiny stat pills above/below a bar chart */
+    .chart-summary { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .chart-pill { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:10px; }
+    .chart-pill-val { font-weight:700; color:var(--accent); }
+    .chart-pill-lbl { color:var(--muted); margin-left:3px; }
+
     /* ── TABLE ──────────────────────────────────── */
     .table-wrap { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
     table { width:100%; border-collapse:collapse; font-size:12px; min-width:480px; }
@@ -106,7 +143,6 @@
     td { padding:10px 12px; border-bottom:1px solid #0a1018; vertical-align:middle; }
     tr:last-child td { border-bottom:none; }
     tr:hover td { background:rgba(255,255,255,.02); }
-    /* Red highlight for markets needing manual resolution */
     tr.needs-resolve td { background:rgba(255,61,90,.05) !important; }
     tr.needs-resolve td:first-child { border-left:3px solid var(--red); padding-left:9px; }
     .loading { color:var(--muted); font-size:13px; padding:24px; text-align:center; }
@@ -156,10 +192,8 @@
     .ai-stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
     .ai-stat-val { font-size:24px; font-weight:700; color:var(--accent); }
     .ai-stat-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
-
     .progress-bar  { width:100%; height:5px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:4px; }
     .progress-fill { height:100%; border-radius:3px; transition:width .3s; }
-
     .suggestion-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; transition:border-color .2s; }
     .suggestion-card:hover { border-color:rgba(34,192,99,.3); }
     .suggestion-card.approved-card { border-color:rgba(34,197,94,.4); opacity:.6; }
@@ -167,7 +201,6 @@
     .suggestion-card.war-card { border-color:rgba(249,115,22,.4); }
     .suggestion-card.needs-manual { border:2px solid var(--red); }
     @media(min-width:768px){ .suggestion-card { padding:18px; } }
-
     .sc-header   { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
     .sc-question { font-size:14px; font-weight:700; color:var(--text); flex:1; min-width:0; line-height:1.4; }
     .sc-badges   { display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; }
@@ -258,8 +291,12 @@
 
   <main>
 
-    <!-- ANALYTICS -->
+    <!-- ══════════════════════════════════════════
+         ANALYTICS TAB
+         ══════════════════════════════════════════ -->
     <div class="tab active" id="tab-analytics">
+
+      <!-- ── Top KPI stat cards ── -->
       <div class="stats-grid">
         <div class="stat-card"><div class="label">Total Revenue</div><div class="value" id="statRevenue">—</div><div class="sub">platform fees</div></div>
         <div class="stat-card"><div class="label">Total Volume</div><div class="value" id="statVolume">—</div><div class="sub">points wagered</div></div>
@@ -270,6 +307,124 @@
         <div class="stat-card"><div class="label">Membership Revenue</div><div class="value" id="statMemRev">—</div><div class="sub">subscriptions</div></div>
         <div class="stat-card"><div class="label">Total Deposits</div><div class="value" id="statDeposits">—</div><div class="sub">Stripe</div></div>
       </div>
+
+      <!-- ── ROW 1: Market volume donut + Deposit vs Withdrawal bar ── -->
+      <div class="charts-grid">
+
+        <!-- CHART 1: Which markets got the most trading action -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-title">Market Trading Volume</span>
+            <div class="chart-toggle">
+              <button class="on" id="mktToggleVol" onclick="setMktMode('volume')">Pool pts</button>
+              <button id="mktToggleFee" onclick="setMktMode('fee')">Fee pts</button>
+            </div>
+          </div>
+          <!-- Summary pills: total bets, avg per market -->
+          <div class="chart-summary">
+            <div class="chart-pill"><span class="chart-pill-val" id="mktTotalPts">—</span><span class="chart-pill-lbl">total pool pts</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="mktTotalEur">—</span><span class="chart-pill-lbl">in euros</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="mktAvgPts">—</span><span class="chart-pill-lbl">avg per market</span></div>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut-canvas-wrap">
+              <canvas id="mktPieChart"></canvas>
+              <div class="donut-centre">
+                <div class="donut-centre-val" id="mktPieCentreVal">—</div>
+                <div class="donut-centre-lbl" id="mktPieCentreLbl">pts total</div>
+              </div>
+            </div>
+            <div class="chart-legend" id="mktLegend">
+              <div style="color:var(--muted);font-size:11px">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHART 2: Deposits vs Withdrawals over time (bar) -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-title">Deposits vs Withdrawals</span>
+            <div class="chart-toggle">
+              <button class="on" id="moneyToggleEur" onclick="setMoneyMode('eur')">EUR</button>
+              <button id="moneyTogglePts" onclick="setMoneyMode('pts')">Points</button>
+            </div>
+          </div>
+          <!-- Summary pills: total deposited, total withdrawn, net -->
+          <div class="chart-summary">
+            <div class="chart-pill"><span class="chart-pill-val" id="moneyTotalDep">—</span><span class="chart-pill-lbl">deposited</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="moneyTotalWd">—</span><span class="chart-pill-lbl">withdrawn</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="moneyNet">—</span><span class="chart-pill-lbl">net retained</span></div>
+          </div>
+          <canvas id="moneyBarChart" style="max-height:220px"></canvas>
+        </div>
+
+      </div>
+
+      <!-- ── ROW 2: Trades breakdown (YES/NO/won/lost) + Trade sizes histogram ── -->
+      <div class="charts-grid">
+
+        <!-- CHART 3: Trades split — YES vs NO bets, won vs lost -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-title">Trades Breakdown</span>
+          </div>
+          <!-- Pill row showing quick numbers -->
+          <div class="chart-summary">
+            <div class="chart-pill"><span class="chart-pill-val" id="tradeCountYes">—</span><span class="chart-pill-lbl">YES bets</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="tradeCountNo">—</span><span class="chart-pill-lbl">NO bets</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="tradeCountWon">—</span><span class="chart-pill-lbl">won</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="tradeCountLost">—</span><span class="chart-pill-lbl">lost</span></div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <!-- Donut: YES vs NO split -->
+            <div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">YES vs NO</div>
+              <div class="donut-canvas-wrap" style="width:110px;height:110px">
+                <canvas id="yesNoPieChart"></canvas>
+                <div class="donut-centre">
+                  <div class="donut-centre-val" id="yesNoCentreVal" style="font-size:13px">—</div>
+                  <div class="donut-centre-lbl">total</div>
+                </div>
+              </div>
+            </div>
+            <!-- Donut: won vs lost split -->
+            <div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Won vs Lost</div>
+              <div class="donut-canvas-wrap" style="width:110px;height:110px">
+                <canvas id="wonLostPieChart"></canvas>
+                <div class="donut-centre">
+                  <div class="donut-centre-val" id="wonLostCentreVal" style="font-size:13px">—</div>
+                  <div class="donut-centre-lbl">settled</div>
+                </div>
+              </div>
+            </div>
+            <!-- Win rate text stat -->
+            <div style="flex:1;min-width:80px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Win Rate</div>
+              <div style="font-size:28px;font-weight:700;color:var(--accent)" id="winRateVal">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">of settled trades</div>
+              <div style="margin-top:14px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Avg stake</div>
+              <div style="font-size:18px;font-weight:700;color:var(--text)" id="avgStakeVal">—</div>
+              <div style="font-size:10px;color:var(--muted)">pts per trade</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHART 4: Horizontal bar — top markets by number of trades placed -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <span class="chart-title">Top Markets by Trade Count</span>
+          </div>
+          <div class="chart-summary">
+            <div class="chart-pill"><span class="chart-pill-val" id="topMktTotal">—</span><span class="chart-pill-lbl">markets tracked</span></div>
+            <div class="chart-pill"><span class="chart-pill-val" id="topMktTopName">—</span><span class="chart-pill-lbl">most active</span></div>
+          </div>
+          <canvas id="mktBarChart" style="max-height:220px"></canvas>
+        </div>
+
+      </div>
+
+      <!-- ── Revenue per market table (existing) ── -->
       <div class="card">
         <div class="card-header"><h3>Revenue per Market</h3></div>
         <div class="table-wrap">
@@ -280,6 +435,7 @@
         </div>
       </div>
     </div>
+    <!-- end Analytics tab -->
 
     <!-- MARKETS -->
     <div class="tab" id="tab-markets">
@@ -532,7 +688,6 @@ window.addEventListener("load", function () {
     var needManual = (res.data||[]).filter(function(m){ return m.auto_generated; });
     var navBtn  = document.getElementById("navMarkets");
     var alertEl = document.getElementById("resolveAlert");
-
     if (needManual.length > 0) {
       if (!document.getElementById("marketsBadge")) {
         var badge = document.createElement("span");
@@ -560,98 +715,394 @@ window.addEventListener("load", function () {
       await fetch(SUPABASE_URL+"/functions/v1/send-admin-email",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          to:      ADMIN_EMAIL,
+          to: ADMIN_EMAIL,
           subject: "⚠️ MyOpinio — "+markets.length+" market(s) need manual resolution",
-          body:    "These AI markets closed but could NOT be auto-resolved:\n\n"+list+"\n\nLog in to admin panel and resolve them manually."
+          body: "These AI markets closed but could NOT be auto-resolved:\n\n"+list+"\n\nLog in to admin panel and resolve them manually."
         })
       });
     } catch(e){ console.log("Email non-critical:",e.message); }
   }
 
-  // ── ANALYTICS ────────────────────────────────
-  // 💡 10 points = €1 — that's the conversion rate used everywhere below
+  // ═══════════════════════════════════════════════
+  // ANALYTICS — loads all data then draws all charts
+  // ═══════════════════════════════════════════════
+  // We store chart instances globally so we can
+  // destroy + redraw them when the mode toggle changes
+  var _charts = {};
+
+  // Colour palette shared across all charts
+  var PALETTE = [
+    "#22c063","#3b82f6","#f59e0b","#ef4444","#8b5cf6",
+    "#06b6d4","#ec4899","#14b8a6","#f97316","#a3e635",
+    "#e879f9","#fb923c","#34d399","#60a5fa","#fbbf24"
+  ];
+
+  // Current toggle modes for charts that have switches
+  var mktMode   = "volume"; // "volume" or "fee"  — market donut
+  var moneyMode = "eur";    // "eur" or "pts"      — deposit/withdrawal bar
+
+  // Raw data saved globally so toggles can redraw without re-fetching
+  var _rawRevenue   = [];
+  var _rawMarketMap = {};
+  var _rawPayments  = [];
+  var _rawWds       = [];
+  var _rawTrades    = [];
+  var _rawMarkets   = [];
+
   window.loadAnalytics = async function() {
-    var mr = await db.from("markets").select("id,question");
-    var marketMap = {}; (mr.data||[]).forEach(function(m){ marketMap[m.id]=m.question; });
-    var [rev,trades,users,open,wallets,memberships,tiers,payments] = await Promise.all([
+
+    // ── fetch everything in parallel ──────────────
+    var mr = await db.from("markets").select("id,question,yes_pool,no_pool,status");
+    _rawMarkets = mr.data||[];
+    _rawMarketMap = {};
+    _rawMarkets.forEach(function(m){ _rawMarketMap[m.id]=m.question; });
+
+    var [rev,trades,users,open,wallets,memberships,tiers,payments,wds] = await Promise.all([
       db.from("platform_revenue").select("fee_collected,total_pool,market_id,created_at"),
-      db.from("trades").select("*",{count:"exact",head:true}),
+      db.from("trades").select("id,option,amount_points,status,market_id"),
       db.from("users_admin").select("*",{count:"exact",head:true}),
       db.from("markets").select("*",{count:"exact",head:true}).eq("status","open"),
       db.from("wallets").select("balance_points"),
       db.from("user_memberships").select("telegram_id,tier_id,status"),
       db.from("membership_tiers").select("id,price_eur_cents"),
-      db.from("payments").select("amount_eur,points_added")
+      db.from("payments").select("amount_eur,points_added,created_at"),
+      db.from("withdrawals").select("amount_eur,amount_points,status,created_at")
     ]);
 
-    var revenue  = rev.data||[];
-    var totalFee = revenue.reduce(function(s,r){return s+Number(r.fee_collected);},0);
-    var totalVol = revenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
+    // Save raw data for toggle redraws
+    _rawRevenue  = rev.data||[];
+    _rawPayments = payments.data||[];
+    _rawWds      = wds.data||[];
+    _rawTrades   = trades.data||[];
+
+    // ── compute KPI totals ───────────────────────
+    var totalFee = _rawRevenue.reduce(function(s,r){return s+Number(r.fee_collected);},0);
+    var totalVol = _rawRevenue.reduce(function(s,r){return s+Number(r.total_pool);},0);
     var wTotal   = (wallets.data||[]).reduce(function(s,w){return s+Number(w.balance_points);},0);
-    var tierPriceMap = {}; (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=(t.price_eur_cents||0)/100;});
-    var totalDepEur  = (payments.data||[]).reduce(function(s,p){return s+Number(p.amount_eur);},0);
-    var totalDepPts  = (payments.data||[]).reduce(function(s,p){return s+Number(p.points_added);},0);
-    var memRevEur    = (memberships.data||[]).reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0);},0);
-    var activeMem    = (memberships.data||[]).filter(function(m){return m.status==="active";}).length;
+    var tierPriceMap = {};
+    (tiers.data||[]).forEach(function(t){tierPriceMap[t.id]=(t.price_eur_cents||0)/100;});
+    var totalDepEur = _rawPayments.reduce(function(s,p){return s+Number(p.amount_eur);},0);
+    var totalDepPts = _rawPayments.reduce(function(s,p){return s+Number(p.points_added);},0);
+    var memRevEur   = (memberships.data||[]).reduce(function(s,m){return s+(tierPriceMap[m.tier_id]||0);},0);
+    var activeMem   = (memberships.data||[]).filter(function(m){return m.status==="active";}).length;
 
-    // ── TOTAL REVENUE ──
-    // Show the points in big green, then euros in small grey underneath
-    // dividing by 10 converts points → euros (10 pts = €1)
+    // ── fill KPI cards ───────────────────────────
     document.getElementById("statRevenue").innerHTML =
-      totalFee.toLocaleString() + " pts" +
-      '<span class="euro-sub">€' + (totalFee / 10).toFixed(2) + '</span>';
-
-    // ── TOTAL VOLUME ──
-    // Same pattern: points on top, euros below
+      totalFee.toLocaleString()+" pts<span class='euro-sub'>€"+(totalFee/10).toFixed(2)+"</span>";
     document.getElementById("statVolume").innerHTML =
-      totalVol.toLocaleString() + " pts" +
-      '<span class="euro-sub">€' + (totalVol / 10).toFixed(2) + '</span>';
-
-    // ── TOTAL TRADES — just a plain number, no euro conversion needed ──
-    document.getElementById("statTrades").innerText = (trades.count||0).toLocaleString();
-
-    // ── USERS — just a plain number ──
-    document.getElementById("statUsers").innerText = (users.count||0).toLocaleString();
-
-    // ── OPEN MARKETS — just a plain number ──
-    document.getElementById("statOpen").innerText = (open.count||0).toLocaleString();
-
-    // ── POINTS IN WALLETS ──
-    // Total points sitting in all user wallets, converted to euros below
+      totalVol.toLocaleString()+" pts<span class='euro-sub'>€"+(totalVol/10).toFixed(2)+"</span>";
+    document.getElementById("statTrades").innerText  = (trades.count||_rawTrades.length||0).toLocaleString();
+    document.getElementById("statUsers").innerText   = (users.count||0).toLocaleString();
+    document.getElementById("statOpen").innerText    = (open.count||0).toLocaleString();
     document.getElementById("statWallets").innerHTML =
-      wTotal.toLocaleString() + " pts" +
-      '<span class="euro-sub">€' + (wTotal / 10).toFixed(2) + '</span>';
+      wTotal.toLocaleString()+" pts<span class='euro-sub'>€"+(wTotal/10).toFixed(2)+"</span>";
+    document.getElementById("statMemRev").innerText  =
+      memRevEur>0 ? "€"+memRevEur.toFixed(2)+" · "+activeMem+" active" : (memberships.data||[]).length+" total";
+    document.getElementById("statDeposits").innerHTML=
+      "€"+totalDepEur.toFixed(2)+"<span class='euro-sub'>"+totalDepPts.toLocaleString()+" pts</span>";
 
-    // ── MEMBERSHIP REVENUE — already in euros, show active count too ──
-    document.getElementById("statMemRev").innerText =
-      memRevEur > 0
-        ? "€" + memRevEur.toFixed(2) + " · " + activeMem + " active"
-        : (memberships.data||[]).length + " total";
+    // ── draw all charts ──────────────────────────
+    drawMktDonut();       // Chart 1: market volume donut
+    drawMoneyBar();       // Chart 2: deposits vs withdrawals
+    drawTradesBreakdown();// Chart 3: YES/NO, won/lost
+    drawTopMarketsBar();  // Chart 4: top markets by trade count
 
-    // ── TOTAL DEPOSITS ──
-    // Already in euros from Stripe — show euros on top, points below
-    document.getElementById("statDeposits").innerHTML =
-      "€" + totalDepEur.toFixed(2) +
-      '<span class="euro-sub">' + totalDepPts.toLocaleString() + ' pts</span>';
-
-    // ── REVENUE PER MARKET TABLE ──
-    // Fill the table with one row per market, most recent first
+    // ── revenue table ────────────────────────────
     var tbody = document.getElementById("revenueTable");
-    if(!revenue.length){tbody.innerHTML='<tr><td colspan="4" class="loading">No revenue yet</td></tr>';return;}
-    tbody.innerHTML = revenue
+    if(!_rawRevenue.length){
+      tbody.innerHTML='<tr><td colspan="4" class="loading">No revenue yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = _rawRevenue
       .sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);})
       .map(function(r){
         return '<tr>'+
-          '<td style="max-width:220px;font-size:11px">'+(marketMap[r.market_id]||r.market_id)+'</td>'+
+          '<td style="max-width:220px;font-size:11px">'+(_rawMarketMap[r.market_id]||r.market_id)+'</td>'+
           '<td>'+Number(r.total_pool).toLocaleString()+' pts<br><span style="color:#64748b;font-size:10px">€'+(Number(r.total_pool)/10).toFixed(2)+'</span></td>'+
-          // Fee column: show pts in green, euros in grey below
           '<td style="color:#22c063;font-weight:700">'+Number(r.fee_collected).toLocaleString()+' pts<br><span style="color:#64748b;font-size:10px;font-weight:400">€'+(Number(r.fee_collected)/10).toFixed(2)+'</span></td>'+
           '<td style="color:#64748b;font-size:11px">'+new Date(r.created_at).toLocaleString()+'</td>'+
         '</tr>';
       }).join("");
   };
 
-  // ── MARKETS ───────────────────────────────────
+  // ─────────────────────────────────────────────
+  // CHART 1 — Market Trading Volume (donut)
+  // Shows which markets attracted the most betting
+  // ─────────────────────────────────────────────
+  function drawMktDonut() {
+    // Group platform_revenue rows by market, summing volume + fee
+    var grouped = {};
+    _rawRevenue.forEach(function(r) {
+      if(!grouped[r.market_id]) grouped[r.market_id] = {volume:0, fee:0, label: shortQ(_rawMarketMap[r.market_id]||r.market_id)};
+      grouped[r.market_id].volume += Number(r.total_pool);
+      grouped[r.market_id].fee   += Number(r.fee_collected);
+    });
+
+    // If no settled markets yet, fall back to live pool sizes from markets table
+    if(!Object.keys(grouped).length) {
+      _rawMarkets.forEach(function(m) {
+        var vol = Number(m.yes_pool||0) + Number(m.no_pool||0);
+        if(vol > 0) grouped[m.id] = {volume: vol, fee: 0, label: shortQ(m.question)};
+      });
+    }
+
+    var entries = Object.values(grouped).sort(function(a,b){
+      return (mktMode==="fee" ? b.fee-a.fee : b.volume-a.volume);
+    });
+
+    var values = entries.map(function(e){ return mktMode==="fee" ? e.fee : e.volume; });
+    var labels = entries.map(function(e){ return e.label; });
+    var colours= entries.map(function(_,i){ return PALETTE[i%PALETTE.length]; });
+    var total  = values.reduce(function(s,v){return s+v;},0);
+    var mktCount = entries.length;
+
+    // ── summary pills ──
+    document.getElementById("mktTotalPts").innerText  = total.toLocaleString();
+    document.getElementById("mktTotalEur").innerText  = "€"+(total/10).toFixed(2);
+    document.getElementById("mktAvgPts").innerText    = mktCount ? Math.round(total/mktCount).toLocaleString() : "0";
+    document.getElementById("mktPieCentreVal").innerText = total.toLocaleString();
+    document.getElementById("mktPieCentreLbl").innerText = mktMode==="fee" ? "fee pts" : "pool pts";
+
+    // ── donut ──
+    var ctx = document.getElementById("mktPieChart").getContext("2d");
+    if(_charts.mktPie) _charts.mktPie.destroy();
+
+    if(!entries.length) {
+      document.getElementById("mktLegend").innerHTML='<div style="color:var(--muted);font-size:11px">No market data yet — trades appear here once markets settle.</div>';
+      return;
+    }
+
+    _charts.mktPie = new Chart(ctx, {
+      type: "doughnut",
+      data: { labels:labels, datasets:[{ data:values, backgroundColor:colours, borderColor:"#06070b", borderWidth:3, hoverOffset:5 }] },
+      options: {
+        cutout:"62%",
+        plugins: {
+          legend: { display:false },
+          tooltip: { callbacks: { label: function(c){ var pct=total>0?((c.parsed/total)*100).toFixed(1):0; return " "+c.parsed.toLocaleString()+" pts ("+pct+"%)"; } } }
+        }
+      }
+    });
+
+    // ── legend ──
+    document.getElementById("mktLegend").innerHTML = entries.map(function(e,i){
+      var val = mktMode==="fee" ? e.fee : e.volume;
+      var pct = total>0 ? ((val/total)*100).toFixed(1) : 0;
+      return '<div class="legend-row">'+
+        '<div class="legend-dot" style="background:'+colours[i]+'"></div>'+
+        '<div class="legend-label">'+e.label+'</div>'+
+        '<div class="legend-val">'+val.toLocaleString()+'</div>'+
+        '<div class="legend-pct">'+pct+'%</div>'+
+      '</div>';
+    }).join("");
+  }
+
+  // Toggle buttons for chart 1
+  window.setMktMode = function(mode) {
+    mktMode = mode;
+    document.getElementById("mktToggleVol").classList.toggle("on", mode==="volume");
+    document.getElementById("mktToggleFee").classList.toggle("on", mode==="fee");
+    drawMktDonut();
+  };
+
+  // ─────────────────────────────────────────────
+  // CHART 2 — Deposits vs Withdrawals bar chart
+  // Groups payments + withdrawals by calendar month
+  // ─────────────────────────────────────────────
+  function drawMoneyBar() {
+    // Build a map of month → {dep, wd} using YYYY-MM as key
+    var months = {};
+
+    _rawPayments.forEach(function(p) {
+      var mon = p.created_at ? p.created_at.slice(0,7) : "Unknown";
+      if(!months[mon]) months[mon] = {dep_eur:0, dep_pts:0, wd_eur:0, wd_pts:0};
+      months[mon].dep_eur += Number(p.amount_eur||0);
+      months[mon].dep_pts += Number(p.points_added||0);
+    });
+
+    _rawWds.filter(function(w){return w.status==="completed"||w.status==="processing";}).forEach(function(w) {
+      var mon = w.created_at ? w.created_at.slice(0,7) : "Unknown";
+      if(!months[mon]) months[mon] = {dep_eur:0, dep_pts:0, wd_eur:0, wd_pts:0};
+      months[mon].wd_eur += Number(w.amount_eur||0);
+      months[mon].wd_pts += Number(w.amount_points||0);
+    });
+
+    var sortedMonths = Object.keys(months).sort();
+    var labels = sortedMonths.map(function(m){ return m; }); // YYYY-MM is fine as label
+
+    var depVals = sortedMonths.map(function(m){ return moneyMode==="eur" ? months[m].dep_eur : months[m].dep_pts; });
+    var wdVals  = sortedMonths.map(function(m){ return moneyMode==="eur" ? months[m].wd_eur  : months[m].wd_pts; });
+
+    var totalDep = depVals.reduce(function(s,v){return s+v;},0);
+    var totalWd  = wdVals.reduce(function(s,v){return s+v;},0);
+    var net      = totalDep - totalWd;
+
+    var prefix = moneyMode==="eur" ? "€" : "";
+    var suffix = moneyMode==="pts" ? " pts" : "";
+
+    document.getElementById("moneyTotalDep").innerText = prefix+totalDep.toFixed(moneyMode==="eur"?2:0)+suffix;
+    document.getElementById("moneyTotalWd").innerText  = prefix+totalWd.toFixed(moneyMode==="eur"?2:0)+suffix;
+    document.getElementById("moneyNet").innerText      = prefix+net.toFixed(moneyMode==="eur"?2:0)+suffix;
+
+    var ctx = document.getElementById("moneyBarChart").getContext("2d");
+    if(_charts.moneyBar) _charts.moneyBar.destroy();
+
+    // If no data yet, show placeholder message
+    if(!sortedMonths.length) {
+      ctx.fillStyle="#485070"; ctx.font="13px Urbanist,sans-serif";
+      ctx.fillText("No deposit/withdrawal data yet.",10,30);
+      return;
+    }
+
+    _charts.moneyBar = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          { label:"Deposited", data:depVals, backgroundColor:"rgba(34,192,99,0.7)", borderColor:"#22c063", borderWidth:1, borderRadius:4 },
+          { label:"Withdrawn", data:wdVals,  backgroundColor:"rgba(239,68,68,0.55)", borderColor:"#ef4444", borderWidth:1, borderRadius:4 }
+        ]
+      },
+      options: {
+        plugins: {
+          legend: { labels:{ color:"#dde0f0", font:{size:11,family:"Urbanist,sans-serif"}, boxWidth:10, padding:10 } },
+          tooltip: { callbacks: { label: function(c){ return " "+c.dataset.label+": "+(moneyMode==="eur"?"€":"")+Number(c.raw).toLocaleString()+(moneyMode==="pts"?" pts":""); } } }
+        },
+        scales: {
+          x: { ticks:{color:"#485070",font:{size:10}}, grid:{color:"rgba(255,255,255,0.03)"} },
+          y: { ticks:{color:"#485070",font:{size:10}, callback:function(v){ return moneyMode==="eur"?"€"+v:v.toLocaleString(); }}, grid:{color:"rgba(255,255,255,0.04)"} }
+        }
+      }
+    });
+  }
+
+  window.setMoneyMode = function(mode) {
+    moneyMode = mode;
+    document.getElementById("moneyToggleEur").classList.toggle("on", mode==="eur");
+    document.getElementById("moneyTogglePts").classList.toggle("on", mode==="pts");
+    drawMoneyBar();
+  };
+
+  // ─────────────────────────────────────────────
+  // CHART 3 — Trades Breakdown
+  // Two small donuts: YES/NO split + won/lost split
+  // ─────────────────────────────────────────────
+  function drawTradesBreakdown() {
+    var yes=0, no=0, won=0, lost=0, cancelled=0, totalStake=0;
+
+    _rawTrades.forEach(function(t) {
+      if(t.option==="YES"||t.option==="yes") yes++;
+      else no++;
+      if(t.status==="won")       won++;
+      else if(t.status==="lost") lost++;
+      else if(t.status==="cancelled") cancelled++;
+      totalStake += Number(t.amount_points||0);
+    });
+
+    var total    = _rawTrades.length;
+    var settled  = won+lost;
+    var winRate  = settled ? Math.round((won/settled)*100) : 0;
+    var avgStake = total   ? Math.round(totalStake/total) : 0;
+
+    // ── fill pills ──
+    document.getElementById("tradeCountYes").innerText  = yes.toLocaleString();
+    document.getElementById("tradeCountNo").innerText   = no.toLocaleString();
+    document.getElementById("tradeCountWon").innerText  = won.toLocaleString();
+    document.getElementById("tradeCountLost").innerText = lost.toLocaleString();
+    document.getElementById("winRateVal").innerText     = winRate+"%";
+    document.getElementById("avgStakeVal").innerText    = avgStake.toLocaleString();
+    document.getElementById("yesNoCentreVal").innerText = total.toLocaleString();
+    document.getElementById("wonLostCentreVal").innerText = settled.toLocaleString();
+
+    // ── YES/NO donut ──
+    var ctx1 = document.getElementById("yesNoPieChart").getContext("2d");
+    if(_charts.yesNo) _charts.yesNo.destroy();
+    _charts.yesNo = new Chart(ctx1, {
+      type:"doughnut",
+      data:{
+        labels:["YES","NO"],
+        datasets:[{ data:[yes,no], backgroundColor:["rgba(34,197,94,0.75)","rgba(239,68,68,0.65)"], borderColor:"#06070b", borderWidth:2 }]
+      },
+      options:{ cutout:"60%", plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){var pct=total>0?((c.parsed/total)*100).toFixed(0):0;return " "+c.label+": "+c.parsed+" ("+pct+"%)";}}}} }
+    });
+
+    // ── Won/Lost donut ──
+    var ctx2 = document.getElementById("wonLostPieChart").getContext("2d");
+    if(_charts.wonLost) _charts.wonLost.destroy();
+    _charts.wonLost = new Chart(ctx2, {
+      type:"doughnut",
+      data:{
+        labels:["Won","Lost"],
+        datasets:[{ data:[won,lost], backgroundColor:["rgba(34,192,99,0.75)","rgba(239,68,68,0.55)"], borderColor:"#06070b", borderWidth:2 }]
+      },
+      options:{ cutout:"60%", plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){var pct=settled>0?((c.parsed/settled)*100).toFixed(0):0;return " "+c.label+": "+c.parsed+" ("+pct+"%)";}}}} }
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // CHART 4 — Top Markets by Trade Count (horizontal bar)
+  // Shows which market questions attracted the most traders
+  // ─────────────────────────────────────────────
+  function drawTopMarketsBar() {
+    // Count trades per market
+    var mktTradeCount = {};
+    _rawTrades.forEach(function(t) {
+      if(!t.market_id) return;
+      mktTradeCount[t.market_id] = (mktTradeCount[t.market_id]||0)+1;
+    });
+
+    var entries = Object.keys(mktTradeCount).map(function(id){
+      return { label: shortQ(_rawMarketMap[id]||id), count: mktTradeCount[id] };
+    }).sort(function(a,b){ return b.count-a.count; }).slice(0,10); // top 10
+
+    var totalMkts = Object.keys(mktTradeCount).length;
+    document.getElementById("topMktTotal").innerText  = totalMkts;
+    document.getElementById("topMktTopName").innerText = entries.length ? entries[0].label.slice(0,18)+"…" : "—";
+
+    var ctx = document.getElementById("mktBarChart").getContext("2d");
+    if(_charts.mktBar) _charts.mktBar.destroy();
+
+    if(!entries.length) {
+      ctx.fillStyle="#485070"; ctx.font="13px Urbanist,sans-serif";
+      ctx.fillText("No trade data yet.",10,30);
+      return;
+    }
+
+    _charts.mktBar = new Chart(ctx, {
+      type:"bar",
+      data:{
+        labels: entries.map(function(e){return e.label;}),
+        datasets:[{
+          label:"Trades",
+          data:  entries.map(function(e){return e.count;}),
+          backgroundColor: entries.map(function(_,i){return PALETTE[i%PALETTE.length]+"bb";}),
+          borderColor:     entries.map(function(_,i){return PALETTE[i%PALETTE.length];}),
+          borderWidth:1,
+          borderRadius:4
+        }]
+      },
+      options:{
+        indexAxis:"y", // horizontal bars
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:function(c){return " "+c.raw+" trades";}}}
+        },
+        scales:{
+          x:{ ticks:{color:"#485070",font:{size:10}}, grid:{color:"rgba(255,255,255,0.04)"} },
+          y:{ ticks:{color:"#dde0f0",font:{size:10}, callback:function(val,idx){ var l=entries[idx]?entries[idx].label:""; return l.length>22?l.slice(0,22)+"…":l; }}, grid:{display:false} }
+        }
+      }
+    });
+  }
+
+  // ── Helper: shorten a long market question for chart labels ──
+  function shortQ(q) {
+    return q && q.length > 38 ? q.slice(0,38)+"…" : (q||"?");
+  }
+
+  // ═══════════════════════════════════════════════
+  // MARKETS
+  // ═══════════════════════════════════════════════
   window.loadMarkets = async function() {
     var res = await db.from("markets").select("*").order("created_at",{ascending:false});
     var markets = res.data||[];
@@ -721,7 +1172,9 @@ window.addEventListener("load", function () {
     document.getElementById("newClosesAt").value="";
   };
 
-  // ── USERS ─────────────────────────────────────
+  // ═══════════════════════════════════════════════
+  // USERS
+  // ═══════════════════════════════════════════════
   window.loadUsers = async function() {
     var tbody=document.getElementById("usersTable");
     tbody.innerHTML='<tr><td colspan="8" class="loading">Loading users...</td></tr>';
@@ -795,7 +1248,9 @@ window.addEventListener("load", function () {
     showToast("✅ "+(amt>0?"+":"")+amt+" pts"); inp.value=""; setTimeout(loadUsers,500);
   };
 
-  // ── USER PANEL ────────────────────────────────
+  // ═══════════════════════════════════════════════
+  // USER PANEL
+  // ═══════════════════════════════════════════════
   window.openUserPanel = async function(key,username,email,fullName,balPts) {
     var u=allUsersData.find(function(u){return(u.telegram_id||u.email||u.username||"")===key;});
     var tid=u?u.telegram_id:key;
@@ -831,7 +1286,9 @@ window.addEventListener("load", function () {
     document.getElementById("panelOverlay").classList.remove("show");
   };
 
-  // ── LEDGER ────────────────────────────────────
+  // ═══════════════════════════════════════════════
+  // LEDGER
+  // ═══════════════════════════════════════════════
   window.loadLedger = async function() {
     var tbody=document.getElementById("ledgerTable");
     tbody.innerHTML='<tr><td colspan="6" class="loading">Loading...</td></tr>';
@@ -842,7 +1299,9 @@ window.addEventListener("load", function () {
     tbody.innerHTML=data.map(function(e){var clr=tc[e.type]||"#64748b";return '<tr><td style="color:#64748b;font-size:10px;white-space:nowrap">'+new Date(e.created_at).toLocaleString()+'</td><td style="font-size:11px">'+e.telegram_id+'</td><td><span style="color:'+clr+';font-weight:700;font-size:10px;text-transform:uppercase">'+e.type+'</span></td><td style="font-weight:700;color:'+(e.amount>=0?'#22c55e':'#ef4444')+'">'+(e.amount>=0?'+':'')+Number(e.amount).toLocaleString()+' pts</td><td>'+Number(e.balance_after).toLocaleString()+' pts</td><td style="color:#64748b;font-size:10px">'+(e.note||'—')+'</td></tr>';}).join("");
   };
 
-  // ── WITHDRAWALS ───────────────────────────────
+  // ═══════════════════════════════════════════════
+  // WITHDRAWALS
+  // ═══════════════════════════════════════════════
   window.loadWithdrawals = async function() {
     var filter=document.getElementById("wdFilter").value;
     var tbody=document.getElementById("wdTable");
@@ -870,7 +1329,9 @@ window.addEventListener("load", function () {
     showToast(data.message||"Done!"); loadWithdrawals();
   };
 
-  // ── QUESTIONS ─────────────────────────────────
+  // ═══════════════════════════════════════════════
+  // QUESTIONS
+  // ═══════════════════════════════════════════════
   window.loadQuestions = async function() {
     var filter=document.getElementById("qFilter").value;
     var tbody=document.getElementById("qTable");
@@ -898,7 +1359,9 @@ window.addEventListener("load", function () {
     else{var fb2=await db.from("question_submissions").update({status:"rejected"}).eq("id",id);if(fb2.error)showToast("Failed",true);else{showToast("Rejected");loadQuestions();}}
   };
 
-  // ── AI SUGGESTIONS ────────────────────────────
+  // ═══════════════════════════════════════════════
+  // AI SUGGESTIONS
+  // ═══════════════════════════════════════════════
   window.loadAiSuggestions = async function() {
     var sf=document.getElementById("aiFilter").value;
     var cf=document.getElementById("aiCatFilter").value;
