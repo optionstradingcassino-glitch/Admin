@@ -1470,7 +1470,7 @@ window.runAIGenerator = async function() {
   var btn = document.getElementById('aigenRunBtn');
   var statusEl = document.getElementById('aigenStatus');
   btn.disabled = true; btn.innerText = 'Generating...';
-  statusEl.style.display = 'block';
+  statusEl.style.cssText = 'display:block;font-size:13px;color:var(--text3);font-family:monospace;line-height:1.8;white-space:pre-wrap;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:16px;transition:opacity .4s ease';
   statusEl.innerText = '';
 
   var SUPA_URL = SUPABASE_URL;
@@ -1518,7 +1518,15 @@ window.runAIGenerator = async function() {
   await loadAIQueue();
   log('Done! Review and approve questions below.');
 
-  btn.disabled = false; btn.innerText = 'Generate Now';
+  btn.disabled = false; btn.innerText = '⚡ Generate Now';
+  // Auto-collapse the status log after 3 seconds
+  setTimeout(function() {
+    statusEl.style.transition = 'opacity .4s ease, max-height .4s ease';
+    statusEl.style.opacity = '0';
+    statusEl.style.maxHeight = '0';
+    statusEl.style.padding = '0';
+    statusEl.style.margin = '0';
+  }, 3000);
 };
 
 
@@ -1528,8 +1536,10 @@ window.loadAIQueue = async function() {
   var countEl   = document.getElementById('aigenPendingCount');
   container.innerHTML = '<div class="spinner"></div>';
 
+  var now = new Date().toISOString();
   var { data, error } = await db.from('market_suggestions')
     .select('*')
+    .or('status.eq.approved,status.eq.rejected,and(status.eq.pending,resolution_time.gte.' + now + ')')
     .order('created_at', { ascending: false })
     .limit(100);
 
