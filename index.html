@@ -1499,29 +1499,24 @@ window.runAIGenerator = async function() {
   closeDate.setDate(closeDate.getDate() + days);
   var closeDateStr = closeDate.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
 
-  var prompt = \`Today is \${today}. You are generating prediction market questions for "My Opinio" — a platform where users bet YES or NO on real-world outcomes.
-
-Generate exactly \${count} diverse, engaging prediction questions covering these topics: \${cats.join(', ')}.
-
-Rules:
-- Questions MUST be answerable with YES or NO
-- Questions must resolve within \${days} days (by \${closeDateStr})
-- Questions must be about REAL, SPECIFIC, VERIFIABLE events
-- Questions should be engaging and debatable — not obvious
-- Mix easy and hard predictions
-- Cover different topics, don't repeat the same theme
-- Use current events from \${today} onwards
-
-Return ONLY a JSON array, no other text. Format:
-[
-  {
-    "question": "Will Bitcoin close above $90,000 on \${closeDateStr}?",
-    "category": "Crypto",
-    "rationale": "BTC has been consolidating around $85k with strong institutional demand"
-  }
-]
-
-Generate \${count} questions now:\`;
+  var prompt = [
+    'Today is ' + today + '. You are generating prediction market questions for My Opinio — a platform where users bet YES or NO on real-world outcomes.',
+    '',
+    'Generate exactly ' + count + ' diverse prediction questions covering: ' + cats.join(', ') + '.',
+    '',
+    'Rules:',
+    '- Each question MUST be answerable YES or NO',
+    '- Must resolve within ' + days + ' days (by ' + closeDateStr + ')',
+    '- Must be about REAL, SPECIFIC, VERIFIABLE events — no hypotheticals',
+    '- Be engaging and debatable — not obvious outcomes',
+    '- Cover different topics, do not repeat themes',
+    '- Draw from current events happening around ' + today,
+    '',
+    'Return ONLY a raw JSON array. No markdown, no backticks, no explanation. Format:',
+    '[{"question":"Will Bitcoin close above $90k by ' + closeDateStr + '?","category":"Crypto","rationale":"BTC near ATH with ETF inflows"}]',
+    '',
+    'Generate ' + count + ' questions now:'
+  ].join('\n');
 
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1610,31 +1605,36 @@ window.loadAIQueue = async function() {
       'Crypto':'#f97316','Politics':'#3b82f6','Sports':'#10b981',
       'Tech':'#8b5cf6','Finance':'#06b6d4','Entertainment':'#ec4899','Science':'#14b8a6','General':'#6b7280'
     }[q.category] || '#6b7280';
+    var catBg = catColor + '22';
+    var genDate = new Date(q.generated_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    var closeDate = new Date(q.closes_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    var rationaleHtml = q.rationale ? '<div class="aigen-meta">💡 ' + q.rationale + '</div>' : '';
+    var cardClass = 'aigen-card' + (q.status !== 'pending' ? ' ' + q.status : '');
 
     var actions = '';
+    var actions = '';
     if (q.status === 'pending') {
-      actions = \`
-        <button class="btn btn-green aigen-edit" onclick="approveAI('\${q.id}','\${q.closes_at}')">✅ Approve</button>
-        <button class="btn btn-ghost aigen-edit" onclick="editAIQuestion('\${q.id}')">✏️ Edit</button>
-        <button class="btn aigen-edit" style="background:var(--red-soft);color:var(--red);border-color:rgba(255,69,58,.25)" onclick="rejectAI('\${q.id}')">✕ Reject</button>\`;
+      actions = "<button class='btn btn-green aigen-edit' onclick='approveAI(&quot;" + q.id + "&quot;,&quot;" + q.closes_at + "&quot;)'>✅ Approve</button>" +
+               "<button class='btn btn-ghost aigen-edit' onclick='editAIQuestion(&quot;" + q.id + "&quot;)'>✏️ Edit</button>" +
+               "<button class='btn aigen-edit' style='background:var(--red-soft);color:var(--red)' onclick='rejectAI(&quot;" + q.id + "&quot;)'>✕ Reject</button>";
     } else if (q.status === 'approved' || q.status === 'live') {
-      actions = '<span style="font-size:12px;color:var(--green)">Market created ✅</span>';
+      actions = "<span style='font-size:12px;color:var(--green)'>Market created ✅</span>";
     }
 
-    return \`<div class="aigen-card \${q.status !== 'pending' ? q.status : ''}" id="aigencard-\${q.id}">
-      <div class="aigen-num">\${i+1}</div>
-      <div class="aigen-body">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:\${catColor}22;color:\${catColor}">\${q.category}</span>
-          <span style="font-size:11px;font-weight:700;color:\${statusColor}">\${statusLabel}</span>
-          <span style="font-size:11px;color:var(--text3);margin-left:auto">\${new Date(q.generated_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
-        </div>
-        <div class="aigen-q" id="aigenq-\${q.id}">\${q.question}</div>
-        \${q.rationale ? \`<div class="aigen-meta">💡 \${q.rationale}</div>\` : ''}
-        <div class="aigen-meta">⏰ Closes: \${new Date(q.closes_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
-        <div class="aigen-actions">\${actions}</div>
-      </div>
-    </div>\`;
+    return '<div class="' + cardClass + '" id="aigencard-' + q.id + '">' +
+      '<div class="aigen-num">' + (i+1) + '</div>' +
+      '<div class="aigen-body">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+          '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:' + catBg + ';color:' + catColor + '">' + q.category + '</span>' +
+          '<span style="font-size:11px;font-weight:700;color:' + statusColor + '">' + statusLabel + '</span>' +
+          '<span style="font-size:11px;color:var(--text3);margin-left:auto">' + genDate + '</span>' +
+        '</div>' +
+        '<div class="aigen-q" id="aigenq-' + q.id + '">' + q.question + '</div>' +
+        rationaleHtml +
+        '<div class="aigen-meta">⏰ Closes: ' + closeDate + '</div>' +
+        '<div class="aigen-actions">' + actions + '</div>' +
+      '</div>' +
+    '</div>';
   }).join('');
 };
 
