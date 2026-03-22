@@ -134,6 +134,37 @@
     .aigen-meta { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
     .aigen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .aigen-edit { font-size: 13px; padding: 7px 12px; }
+    .aigen-filter-pill {
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 12px; font-weight: 600;
+      border: 1.5px solid var(--border2);
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      transition: all .18s;
+      white-space: nowrap;
+    }
+    .aigen-filter-pill.active {
+      background: var(--green-s);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .aigen-filter-pill.active[id="afpill-rejected"] {
+      background: rgba(239,68,68,.1);
+      border-color: rgba(239,68,68,.4);
+      color: #ef4444;
+    }
+    .aigen-filter-pill.active[id="afpill-approved"] {
+      background: rgba(47,209,88,.1);
+      border-color: rgba(47,209,88,.4);
+      color: var(--green);
+    }
+    .aigen-filter-pill.active[id="afpill-pending"] {
+      background: rgba(251,191,36,.1);
+      border-color: rgba(251,191,36,.4);
+      color: #fbbf24;
+    }
 
     /* Main content */
     .main {
@@ -715,11 +746,21 @@
 
         <!-- Generated questions pending approval -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">⏳ Pending AI Questions <span id="aigenPendingCount" style="font-size:12px;color:var(--text3);font-weight:400;margin-left:6px"></span></div>
-            <div style="display:flex;gap:8px">
+          <div class="card-header" style="flex-wrap:wrap;gap:10px">
+            <div class="card-title" style="flex:1;min-width:200px">
+              AI Questions
+              <span id="aigenPendingCount" style="font-size:12px;color:var(--text3);font-weight:400;margin-left:6px"></span>
+            </div>
+            <!-- Multi-select filter -->
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div style="font-size:12px;color:var(--text3);font-weight:600">Filter:</div>
+              <div style="display:flex;gap:5px" id="aigenFilterBtns">
+                <button class="aigen-filter-pill active" onclick="toggleAIFilter('pending')"   id="afpill-pending">⏳ Pending</button>
+                <button class="aigen-filter-pill"        onclick="toggleAIFilter('approved')"  id="afpill-approved">✅ Approved</button>
+                <button class="aigen-filter-pill"        onclick="toggleAIFilter('rejected')"  id="afpill-rejected">✕ Rejected</button>
+              </div>
               <button class="btn btn-ghost" onclick="approveAllAI()" id="approveAllBtn" style="font-size:12px;padding:6px 14px;display:none">✅ Approve All</button>
-              <button class="btn btn-ghost" onclick="loadAIQueue()" style="font-size:12px;padding:6px 14px">Refresh</button>
+              <button class="btn btn-ghost" onclick="loadAIQueue()"  style="font-size:12px;padding:6px 14px">Refresh</button>
             </div>
           </div>
           <div id="aigenQueue" style="padding:16px">
@@ -1531,17 +1572,29 @@ window.runAIGenerator = async function() {
 
 
 // Load pending AI questions from DB
+// Track active filter states (multi-select)
+var aigenActiveFilters = { pending: true, approved: false, rejected: false };
+
+window.toggleAIFilter = function(status) {
+  aigenActiveFilters[status] = !aigenActiveFilters[status];
+  var pill = document.getElementById('afpill-' + status);
+  if (pill) pill.classList.toggle('active', aigenActiveFilters[status]);
+  // Re-render with current data
+  renderAIQueue();
+};
+
+var allAIData = []; // cache all data so filter doesn't need DB round-trip
+
 window.loadAIQueue = async function() {
   var container = document.getElementById('aigenQueue');
   var countEl   = document.getElementById('aigenPendingCount');
   container.innerHTML = '<div class="spinner"></div>';
 
-  var now = new Date().toISOString();
+  // Fetch ALL records — no limit, no expiry filter
+  // We sort: pending first (by created_at desc), then approved, then rejected
   var { data, error } = await db.from('market_suggestions')
     .select('*')
-    .or('status.eq.approved,status.eq.rejected,and(status.eq.pending,resolution_time.gte.' + now + ')')
-    .order('created_at', { ascending: false })
-    .limit(100);
+    .order('created_at', { ascending: false });
 
   if (error || !data?.length) {
     container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">No AI-generated questions yet. Click "Generate Now" to start.</div>';
@@ -1550,8 +1603,10 @@ window.loadAIQueue = async function() {
     return;
   }
 
+  allAIData = data;
+
   var pending = data.filter(function(q){ return q.status === 'pending'; });
-  if (countEl) countEl.innerText = '(' + pending.length + ' pending)';
+  if (countEl) countEl.innerText = '(' + pending.length + ' pending, ' + data.length + ' total)';
   document.getElementById('approveAllBtn').style.display = pending.length ? 'flex' : 'none';
 
   // Update badge
@@ -1561,7 +1616,44 @@ window.loadAIQueue = async function() {
     badge.innerText = pending.length;
   }
 
-  container.innerHTML = data.map(function(q, i) {
+  renderAIQueue();
+};
+
+// Render with current filter (called by both loadAIQueue and toggleAIFilter)
+function renderAIQueue() {
+  var container = document.getElementById('aigenQueue');
+  if (!container || !allAIData.length) return;
+
+  // Determine which statuses to show (at least one must be selected)
+  var activeStatuses = Object.keys(aigenActiveFilters).filter(function(s){ return aigenActiveFilters[s]; });
+  if (!activeStatuses.length) activeStatuses = ['pending']; // fallback
+
+  // Filter + sort: pending first (non-expired), then approved, then rejected — each group newest first
+  var now = Date.now();
+  var filtered = allAIData.filter(function(q) { return activeStatuses.indexOf(q.status) !== -1; });
+
+  // Sort: pending (non-expired) → pending (expired) → approved → rejected, each newest first
+  var statusOrder = { pending: 0, approved: 1, rejected: 2 };
+  filtered.sort(function(a, b) {
+    var aOrder = statusOrder[a.status] || 99;
+    var bOrder = statusOrder[b.status] || 99;
+    // Within same status, newest first EXCEPT approved/rejected go to bottom (oldest first within group)
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    if (a.status === 'pending') return new Date(b.created_at) - new Date(a.created_at); // newest pending first
+    return new Date(a.created_at) - new Date(b.created_at); // approved/rejected: oldest first (pushed to end)
+  });
+
+  // Update count display
+  var countEl = document.getElementById('aigenPendingCount');
+  var pending = allAIData.filter(function(q){ return q.status === 'pending'; });
+  if (countEl) countEl.innerText = '(' + pending.length + ' pending, ' + allAIData.length + ' total)';
+
+  if (!filtered.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">No questions match the current filter.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(function(q, i) {
     var statusColor = {pending:'var(--gold)',approved:'var(--green)',rejected:'var(--red)',live:'var(--blue)'}[q.status] || 'var(--text3)';
     var statusLabel = {pending:'⏳ Pending',approved:'✅ Approved',rejected:'❌ Rejected',live:'🟢 Live'}[q.status] || q.status;
     var catColor = {
@@ -1599,7 +1691,7 @@ window.loadAIQueue = async function() {
       '</div>' +
     '</div>';
   }).join('');
-};
+}
 
 // Approve a single AI question → creates a real market
 window.approveAI = async function(id, closesAt) {
