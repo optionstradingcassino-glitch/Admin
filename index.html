@@ -697,6 +697,13 @@ function startClock() {
   function tick() { document.getElementById("clock").innerText = new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
   tick(); setInterval(tick,1000);
 }
+// Clear a sidebar badge — called when you open a section so the red dot disappears
+// Think of it like a notification: opening the section = you've "read" it
+function clearBadge(id) {
+  var el = document.getElementById(id);
+  if(el) { el.innerText = "0"; el.style.display = "none"; }
+}
+
 function showPage(name) {
   document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
   document.querySelectorAll(".nav-item").forEach(function(b){ b.classList.remove("active"); });
@@ -705,13 +712,14 @@ function showPage(name) {
   currentPage = name;
   var titles = {overview:"Overview",markets:"Markets",opinions:"Community Opinions",users:"Users",withdrawals:"Withdrawals",questions:"Submitted Questions",aigen:"AI Generator",analytics:"Analytics",create:"Create Market"};
   document.getElementById("pageTitle").innerText = titles[name]||name;
+  // Load data AND clear the badge for each section when you open it
   if(name==="markets")     loadMarkets();
-  if(name==="opinions")    loadOpinionsAdmin();
+  if(name==="opinions")    { loadOpinionsAdmin();  clearBadge("opinionsCountBadge"); }
   if(name==="users")       loadUsers();
-  if(name==="withdrawals") loadWithdrawals();
-  if(name==="questions")   loadQuestions();
+  if(name==="withdrawals") { loadWithdrawals();    clearBadge("wdBadge"); }
+  if(name==="questions")   { loadQuestions();      clearBadge("qBadge"); }
   if(name==="analytics")   loadAnalytics();
-  if(name==="aigen")       loadAIQueue();
+  if(name==="aigen")       { loadAIQueue();        clearBadge("aigenBadge"); }
 }
 function refreshCurrent() { showPage(currentPage); }
 
