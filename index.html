@@ -112,6 +112,28 @@
     }
     .sidebar-footer { padding: 14px 16px; border-top: 1px solid var(--border); }
     .clock { font-size: 11px; color: var(--text3); font-variant-numeric: tabular-nums; }
+    .aigen-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .aigen-card.approved { border-color: rgba(47,209,88,.3); background: rgba(47,209,88,.05); }
+    .aigen-card.rejected { opacity: .45; }
+    .aigen-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--surface3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: var(--text3);
+      flex-shrink: 0;
+    }
+    .aigen-body { flex: 1; min-width: 0; }
+    .aigen-q { font-size: 14px; font-weight: 600; line-height: 1.5; margin-bottom: 6px; }
+    .aigen-meta { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+    .aigen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .aigen-edit { font-size: 13px; padding: 7px 12px; }
 
     /* Main content */
     .main {
@@ -394,6 +416,10 @@
         <span class="nav-icon">💡</span> Questions
         <span class="nav-badge" id="qBadge" style="display:none">0</span>
       </button>
+      <button class="nav-item" onclick="showPage('aigen')" id="nav-aigen">
+        <span class="nav-icon">🤖</span> AI Generator
+        <span class="nav-badge" id="aigenBadge" style="display:none">0</span>
+      </button>
       <button class="nav-item" onclick="showPage('create')" id="nav-create">
         <span class="nav-icon">➕</span> Create Market
       </button>
@@ -624,6 +650,85 @@
       </div>
 
       <!-- ── CREATE MARKET ──────────────────────────────────── -->
+      <!-- ── AI GENERATOR PAGE ─────────────────────────────── -->
+      <div class="page" id="page-aigen">
+
+        <!-- Header row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:22px;font-weight:800;letter-spacing:-.5px">🤖 AI Market Generator</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:2px">Fetch trending topics → generate prediction questions → approve for live markets</div>
+          </div>
+          <button class="btn btn-green" onclick="runAIGenerator()" id="aigenRunBtn" style="padding:12px 24px;font-size:14px">
+            ⚡ Generate Now
+          </button>
+        </div>
+
+        <!-- Topic categories -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><div class="card-title">📡 Topic Categories</div></div>
+          <div class="card-body">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-crypto" checked style="accent-color:var(--green)"> ₿ Crypto
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-politics" checked style="accent-color:var(--green)"> 🏛️ Politics
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-sports" checked style="accent-color:var(--green)"> ⚽ Sports
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-tech" checked style="accent-color:var(--green)"> 💻 Tech
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-finance" checked style="accent-color:var(--green)"> 📈 Finance
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-entertainment" style="accent-color:var(--green)"> 🎬 Entertainment
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:13px;font-weight:600">
+                <input type="checkbox" id="cat-science" style="accent-color:var(--green)"> 🔬 Science
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="font-size:13px;color:var(--text3)">Questions to generate:</div>
+              <select id="aigenCount" class="inp" style="width:80px;padding:7px 10px;font-size:13px">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+              </select>
+              <div style="font-size:13px;color:var(--text3)">Closes in:</div>
+              <select id="aigenDays" class="inp" style="width:120px;padding:7px 10px;font-size:13px">
+                <option value="3">3 days</option>
+                <option value="7" selected>7 days</option>
+                <option value="14">14 days</option>
+                <option value="30">30 days</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status / log -->
+        <div id="aigenStatus" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;font-size:13px;color:var(--text3);font-family:monospace;line-height:1.8;white-space:pre-wrap"></div>
+
+        <!-- Generated questions pending approval -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⏳ Pending AI Questions <span id="aigenPendingCount" style="font-size:12px;color:var(--text3);font-weight:400;margin-left:6px"></span></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost" onclick="approveAllAI()" id="approveAllBtn" style="font-size:12px;padding:6px 14px;display:none">✅ Approve All</button>
+              <button class="btn btn-ghost" onclick="loadAIQueue()" style="font-size:12px;padding:6px 14px">Refresh</button>
+            </div>
+          </div>
+          <div id="aigenQueue" style="padding:16px">
+            <div style="text-align:center;color:var(--text3);padding:32px">Run the generator to see AI-suggested questions here</div>
+          </div>
+        </div>
+
+      </div>
+
       <div class="page" id="page-create">
         <div class="card" style="max-width:560px">
           <div class="card-header"><div class="card-title">Create New Market</div></div>
@@ -728,6 +833,7 @@ function showPage(name) {
   document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
   document.querySelectorAll(".nav-item").forEach(function(b){ b.classList.remove("active"); });
   document.getElementById("page-" + name).classList.add("active");
+  if (name === "aigen") loadAIQueue();
   document.getElementById("nav-" + name).classList.add("active");
   currentPage = name;
   var titles = {overview:"Overview",markets:"Markets",opinions:"Community Opinions",users:"Users",withdrawals:"Withdrawals",questions:"Submitted Questions",create:"Create Market"};
@@ -1351,6 +1457,269 @@ function toast(msg, type) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ el.className=""; }, 3000);
 }
+
+// ════════════════════════════════════════════════════════════════
+// AI MARKET GENERATOR
+// Uses Claude API to generate prediction questions from trending topics
+// ════════════════════════════════════════════════════════════════
+
+var aiGenQueue = []; // in-memory queue of generated questions
+
+// Called when "Generate Now" is clicked
+window.runAIGenerator = async function() {
+  var btn = document.getElementById('aigenRunBtn');
+  var statusEl = document.getElementById('aigenStatus');
+  btn.disabled = true; btn.innerText = '⏳ Generating...';
+  statusEl.style.display = 'block';
+  statusEl.innerText = '🔍 Fetching trending topics...\n';
+
+  // Get selected categories
+  var cats = [];
+  if (document.getElementById('cat-crypto')?.checked)        cats.push('cryptocurrency, Bitcoin, Ethereum, DeFi');
+  if (document.getElementById('cat-politics')?.checked)      cats.push('global politics, elections, government policy');
+  if (document.getElementById('cat-sports')?.checked)        cats.push('football, NBA, Formula 1, Champions League, Serie A');
+  if (document.getElementById('cat-tech')?.checked)          cats.push('AI, tech companies, startups, Apple, Google, OpenAI');
+  if (document.getElementById('cat-finance')?.checked)       cats.push('stock markets, interest rates, inflation, Fed, ECB');
+  if (document.getElementById('cat-entertainment')?.checked) cats.push('movies, music, TV shows, celebrities, awards');
+  if (document.getElementById('cat-science')?.checked)       cats.push('space exploration, climate, medical breakthroughs');
+
+  if (!cats.length) {
+    statusEl.innerText += '❌ Select at least one category\n';
+    btn.disabled = false; btn.innerText = '⚡ Generate Now';
+    return;
+  }
+
+  var count = parseInt(document.getElementById('aigenCount').value) || 10;
+  var days  = parseInt(document.getElementById('aigenDays').value) || 7;
+
+  statusEl.innerText += '🤖 Asking Claude to generate ' + count + ' questions...\n';
+
+  var today = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+  var closeDate = new Date();
+  closeDate.setDate(closeDate.getDate() + days);
+  var closeDateStr = closeDate.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+
+  var prompt = \`Today is \${today}. You are generating prediction market questions for "My Opinio" — a platform where users bet YES or NO on real-world outcomes.
+
+Generate exactly \${count} diverse, engaging prediction questions covering these topics: \${cats.join(', ')}.
+
+Rules:
+- Questions MUST be answerable with YES or NO
+- Questions must resolve within \${days} days (by \${closeDateStr})
+- Questions must be about REAL, SPECIFIC, VERIFIABLE events
+- Questions should be engaging and debatable — not obvious
+- Mix easy and hard predictions
+- Cover different topics, don't repeat the same theme
+- Use current events from \${today} onwards
+
+Return ONLY a JSON array, no other text. Format:
+[
+  {
+    "question": "Will Bitcoin close above $90,000 on \${closeDateStr}?",
+    "category": "Crypto",
+    "rationale": "BTC has been consolidating around $85k with strong institutional demand"
+  }
+]
+
+Generate \${count} questions now:\`;
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await res.json();
+    statusEl.innerText += '📥 Response received, parsing...\n';
+
+    var raw = data.content?.[0]?.text || '';
+    // Extract JSON array from response
+    var jsonMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (!jsonMatch) throw new Error('No JSON array found in response');
+
+    var questions = JSON.parse(jsonMatch[0]);
+    statusEl.innerText += '✅ Generated ' + questions.length + ' questions!\n';
+    statusEl.innerText += '📋 Saving to queue...\n';
+
+    // Save to DB as pending AI-generated submissions
+    var saved = 0;
+    var closesAt = closeDate.toISOString();
+    for (var i = 0; i < questions.length; i++) {
+      var q = questions[i];
+      var { error } = await db.from('ai_market_queue').insert({
+        question:    q.question,
+        category:    q.category || 'General',
+        rationale:   q.rationale || '',
+        closes_at:   closesAt,
+        status:      'pending',
+        generated_at: new Date().toISOString()
+      });
+      if (!error) saved++;
+    }
+
+    statusEl.innerText += '✅ Saved ' + saved + '/' + questions.length + ' to queue\n';
+    statusEl.innerText += '👇 Review and approve below\n';
+    loadAIQueue();
+
+  } catch(err) {
+    statusEl.innerText += '❌ Error: ' + err.message + '\n';
+    console.error('[AI Generator]', err);
+  }
+
+  btn.disabled = false; btn.innerText = '⚡ Generate Now';
+};
+
+// Load pending AI questions from DB
+window.loadAIQueue = async function() {
+  var container = document.getElementById('aigenQueue');
+  var countEl   = document.getElementById('aigenPendingCount');
+  container.innerHTML = '<div class="spinner"></div>';
+
+  var { data, error } = await db.from('ai_market_queue')
+    .select('*')
+    .order('generated_at', { ascending: false })
+    .limit(100);
+
+  if (error || !data?.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">No AI-generated questions yet. Click "Generate Now" to start.</div>';
+    if (countEl) countEl.innerText = '';
+    document.getElementById('approveAllBtn').style.display = 'none';
+    return;
+  }
+
+  var pending = data.filter(function(q){ return q.status === 'pending'; });
+  if (countEl) countEl.innerText = '(' + pending.length + ' pending)';
+  document.getElementById('approveAllBtn').style.display = pending.length ? 'flex' : 'none';
+
+  // Update badge
+  var badge = document.getElementById('aigenBadge');
+  if (badge) {
+    badge.style.display = pending.length ? 'flex' : 'none';
+    badge.innerText = pending.length;
+  }
+
+  container.innerHTML = data.map(function(q, i) {
+    var statusColor = {pending:'var(--gold)',approved:'var(--green)',rejected:'var(--red)',live:'var(--blue)'}[q.status] || 'var(--text3)';
+    var statusLabel = {pending:'⏳ Pending',approved:'✅ Approved',rejected:'❌ Rejected',live:'🟢 Live'}[q.status] || q.status;
+    var catColor = {
+      'Crypto':'#f97316','Politics':'#3b82f6','Sports':'#10b981',
+      'Tech':'#8b5cf6','Finance':'#06b6d4','Entertainment':'#ec4899','Science':'#14b8a6','General':'#6b7280'
+    }[q.category] || '#6b7280';
+
+    var actions = '';
+    if (q.status === 'pending') {
+      actions = \`
+        <button class="btn btn-green aigen-edit" onclick="approveAI('\${q.id}','\${q.closes_at}')">✅ Approve</button>
+        <button class="btn btn-ghost aigen-edit" onclick="editAIQuestion('\${q.id}')">✏️ Edit</button>
+        <button class="btn aigen-edit" style="background:var(--red-soft);color:var(--red);border-color:rgba(255,69,58,.25)" onclick="rejectAI('\${q.id}')">✕ Reject</button>\`;
+    } else if (q.status === 'approved' || q.status === 'live') {
+      actions = '<span style="font-size:12px;color:var(--green)">Market created ✅</span>';
+    }
+
+    return \`<div class="aigen-card \${q.status !== 'pending' ? q.status : ''}" id="aigencard-\${q.id}">
+      <div class="aigen-num">\${i+1}</div>
+      <div class="aigen-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:\${catColor}22;color:\${catColor}">\${q.category}</span>
+          <span style="font-size:11px;font-weight:700;color:\${statusColor}">\${statusLabel}</span>
+          <span style="font-size:11px;color:var(--text3);margin-left:auto">\${new Date(q.generated_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div class="aigen-q" id="aigenq-\${q.id}">\${q.question}</div>
+        \${q.rationale ? \`<div class="aigen-meta">💡 \${q.rationale}</div>\` : ''}
+        <div class="aigen-meta">⏰ Closes: \${new Date(q.closes_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        <div class="aigen-actions">\${actions}</div>
+      </div>
+    </div>\`;
+  }).join('');
+};
+
+// Approve a single AI question → creates a real market
+window.approveAI = async function(id, closesAt) {
+  var qEl = document.getElementById('aigenq-' + id);
+  var question = qEl ? qEl.innerText : '';
+
+  // Let admin edit closing time if needed
+  var confirmed = confirm('Create market:\n\n"' + question + '"\n\nClose date: ' + new Date(closesAt).toLocaleDateString('en-GB') + '\n\nProceed?');
+  if (!confirmed) return;
+
+  var card = document.getElementById('aigencard-' + id);
+  if (card) card.style.opacity = '0.5';
+
+  // Create market via edge function
+  var res = await fetch(SUPABASE_URL + '/functions/v1/admin-create-market', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-secret': adminSecret },
+    body: JSON.stringify({ question: question, closes_at: closesAt })
+  });
+  var data = await res.json();
+
+  if (!res.ok) {
+    if (card) card.style.opacity = '1';
+    showToast('Failed: ' + (data.error || 'unknown'), true);
+    return;
+  }
+
+  // Mark as approved in queue
+  await db.from('ai_market_queue').update({ status: 'approved' }).eq('id', id);
+  showToast('✅ Market created!');
+  loadAIQueue();
+};
+
+// Edit a question inline before approving
+window.editAIQuestion = function(id) {
+  var qEl = document.getElementById('aigenq-' + id);
+  if (!qEl) return;
+  var current = qEl.innerText;
+  var edited = prompt('Edit question:', current);
+  if (edited && edited.trim() && edited !== current) {
+    db.from('ai_market_queue').update({ question: edited.trim() }).eq('id', id).then(function() {
+      qEl.innerText = edited.trim();
+      showToast('Question updated');
+    });
+  }
+};
+
+// Reject a question
+window.rejectAI = async function(id) {
+  await db.from('ai_market_queue').update({ status: 'rejected' }).eq('id', id);
+  var card = document.getElementById('aigencard-' + id);
+  if (card) card.classList.add('rejected');
+  showToast('Rejected');
+  loadAIQueue();
+};
+
+// Approve ALL pending questions at once
+window.approveAllAI = async function() {
+  var confirmed = confirm('Approve ALL pending AI questions and create markets for all of them?');
+  if (!confirmed) return;
+
+  var { data } = await db.from('ai_market_queue').select('id,question,closes_at').eq('status','pending');
+  if (!data?.length) return;
+
+  var ok = 0, fail = 0;
+  for (var i = 0; i < data.length; i++) {
+    var q = data[i];
+    var res = await fetch(SUPABASE_URL + '/functions/v1/admin-create-market', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': adminSecret },
+      body: JSON.stringify({ question: q.question, closes_at: q.closes_at })
+    });
+    if (res.ok) {
+      await db.from('ai_market_queue').update({ status: 'approved' }).eq('id', q.id);
+      ok++;
+    } else { fail++; }
+  }
+
+  showToast('✅ Created ' + ok + ' markets' + (fail ? ' (' + fail + ' failed)' : ''));
+  loadAIQueue();
+};
+
+
 </script>
 </body>
 </html>
