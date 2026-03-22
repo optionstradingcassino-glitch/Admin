@@ -1590,11 +1590,25 @@ window.loadAIQueue = async function() {
   var countEl   = document.getElementById('aigenPendingCount');
   container.innerHTML = '<div class="spinner"></div>';
 
-  // Fetch ALL records — no limit, no expiry filter
-  // We sort: pending first (by created_at desc), then approved, then rejected
-  var { data, error } = await db.from('market_suggestions')
-    .select('*')
-    .order('created_at', { ascending: false });
+  // Fetch with smart limits per status to avoid loading all 858 records
+  // Pending: newest 200, Approved: all, Rejected: all
+  var [pendingRes, approvedRes, rejectedRes] = await Promise.all([
+    db.from('market_suggestions').select('*').eq('status','pending')
+      .order('created_at', { ascending: false }).limit(200),
+    db.from('market_suggestions').select('*').eq('status','approved')
+      .order('created_at', { ascending: false }),
+    db.from('market_suggestions').select('*').eq('status','rejected')
+      .order('created_at', { ascending: false })
+  ]);
+  // Also get total pending count
+  var { count: totalPending } = await db.from('market_suggestions')
+    .select('*', { count: 'exact', head: true }).eq('status','pending');
+  var data = [
+    ...(pendingRes.data || []),
+    ...(approvedRes.data || []),
+    ...(rejectedRes.data || [])
+  ];
+  var error = pendingRes.error || approvedRes.error || rejectedRes.error;
 
   if (error || !data?.length) {
     container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">No AI-generated questions yet. Click "Generate Now" to start.</div>';
@@ -1606,7 +1620,8 @@ window.loadAIQueue = async function() {
   allAIData = data;
 
   var pending = data.filter(function(q){ return q.status === 'pending'; });
-  if (countEl) countEl.innerText = '(' + pending.length + ' pending, ' + data.length + ' total)';
+  var realTotal = totalPending || pending.length;
+  if (countEl) countEl.innerText = '(' + realTotal + ' pending · ' + (approvedRes.data||[]).length + ' approved · ' + (rejectedRes.data||[]).length + ' rejected)';
   document.getElementById('approveAllBtn').style.display = pending.length ? 'flex' : 'none';
 
   // Update badge
@@ -1645,8 +1660,10 @@ function renderAIQueue() {
 
   // Update count display
   var countEl = document.getElementById('aigenPendingCount');
-  var pending = allAIData.filter(function(q){ return q.status === 'pending'; });
-  if (countEl) countEl.innerText = '(' + pending.length + ' pending, ' + allAIData.length + ' total)';
+  var rPending  = allAIData.filter(function(q){ return q.status === 'pending'; }).length;
+  var rApproved = allAIData.filter(function(q){ return q.status === 'approved'; }).length;
+  var rRejected = allAIData.filter(function(q){ return q.status === 'rejected'; }).length;
+  if (countEl) countEl.innerText = '(' + rPending + ' pending · ' + rApproved + ' approved · ' + rRejected + ' rejected)';
 
   if (!filtered.length) {
     container.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">No questions match the current filter.</div>';
