@@ -6,6 +6,7 @@
   <title>My Opinio · Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ── TOKENS ─────────────────────────────────────────────── */
     :root {
@@ -400,6 +401,83 @@
     .form-col { display: flex; flex-direction: column; gap: 6px; }
     .form-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; }
     select.sel { background: var(--surface2); }
+
+    /* ── ANALYTICS ──────────────────────────────────────────── */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .analytics-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 24px;
+    }
+    .chart-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 4px;
+    }
+    .chart-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      margin-bottom: 16px;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+    }
+    .chart-wrap-sm {
+      position: relative;
+      height: 180px;
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .chart-legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .analytics-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 18px 20px;
+    }
+    .kpi-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; font-weight: 600; }
+    .kpi-value { font-size: 22px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 2px; }
+    .kpi-sub   { font-size: 12px; color: var(--text3); }
+    .kpi-trend-up   { color: var(--green); }
+    .kpi-trend-down { color: var(--red); }
   </style>
 </head>
 <body>
@@ -409,10 +487,15 @@
   <div class="login-card">
     <div class="login-logo">My <span>Opinio</span></div>
     <div class="login-sub">Admin Dashboard · Restricted Access</div>
+    <!-- Email field — admin must enter their email, not just a shared password -->
+    <input class="login-input" type="email" id="adminEmail" placeholder="Admin email"
+      onkeydown="if(event.key==='Enter')login()" style="margin-bottom:10px"/>
+    <!-- Password field — still here but now checked by Supabase server, not in the browser -->
     <input class="login-input" type="password" id="passwordInput" placeholder="Admin password"
       onkeydown="if(event.key==='Enter')login()"/>
-    <button class="login-btn" onclick="login()">Login</button>
-    <div class="login-err" id="loginError">Wrong password. Try again.</div>
+    <button class="login-btn" id="loginBtn" onclick="login()">Login</button>
+    <!-- Error message is now dynamic, set by JS below -->
+    <div class="login-err" id="loginError"></div>
   </div>
 </div>
 
@@ -450,6 +533,9 @@
       <button class="nav-item" onclick="showPage('aigen')" id="nav-aigen">
         <span class="nav-icon">🤖</span> AI Generator
         <span class="nav-badge" id="aigenBadge" style="display:none">0</span>
+      </button>
+      <button class="nav-item" onclick="showPage('analytics')" id="nav-analytics">
+        <span class="nav-icon">📈</span> Analytics
       </button>
       <button class="nav-item" onclick="showPage('create')" id="nav-create">
         <span class="nav-icon">➕</span> Create Market
@@ -680,6 +766,103 @@
         </div>
       </div>
 
+      <!-- ── ANALYTICS ─────────────────────────────────────── -->
+      <div class="page" id="page-analytics">
+
+        <!-- KPI row -->
+        <div class="analytics-kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-label">Win Rate (YES)</div>
+            <div class="kpi-value" id="aKpiWinYes" style="color:var(--green)">—</div>
+            <div class="kpi-sub">of settled markets</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Stake</div>
+            <div class="kpi-value" id="aKpiAvgStake" style="color:var(--blue)">—</div>
+            <div class="kpi-sub">points per trade</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value" id="aKpiRevenue" style="color:var(--amber)">—</div>
+            <div class="kpi-sub">platform fees collected</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Active Traders</div>
+            <div class="kpi-value" id="aKpiActive" style="color:var(--purple)">—</div>
+            <div class="kpi-sub">users with trades</div>
+          </div>
+        </div>
+
+        <!-- Row 1: Trade outcomes pie + User groups pie -->
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <div class="chart-title">Trade Outcomes</div>
+            <div class="chart-value" id="aTradeTotal" style="color:var(--text)">—</div>
+            <div class="chart-wrap-sm">
+              <canvas id="chartTradeOutcomes"></canvas>
+            </div>
+            <div class="chart-legend" id="legendTradeOutcomes"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">User Groups</div>
+            <div class="chart-value" id="aUserTotal" style="color:var(--text)">—</div>
+            <div class="chart-wrap-sm">
+              <canvas id="chartUserGroups"></canvas>
+            </div>
+            <div class="chart-legend" id="legendUserGroups"></div>
+          </div>
+        </div>
+
+        <!-- Row 2: Stakes bar chart (full width) -->
+        <div class="chart-card" style="margin-bottom:20px">
+          <div class="chart-title">Stake Distribution</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:16px">How many trades fall into each stake range</div>
+          <div class="chart-wrap">
+            <canvas id="chartStakeDist"></canvas>
+          </div>
+        </div>
+
+        <!-- Row 3: Market status pie + YES vs NO volume bar -->
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <div class="chart-title">Market Status</div>
+            <div class="chart-value" id="aMarketTotal" style="color:var(--text)">—</div>
+            <div class="chart-wrap-sm">
+              <canvas id="chartMarketStatus"></canvas>
+            </div>
+            <div class="chart-legend" id="legendMarketStatus"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">YES vs NO Volume</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Points staked on each side across open markets</div>
+            <div class="chart-wrap-sm">
+              <canvas id="chartYesNo"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 4: Membership tiers pie + Withdrawal status -->
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <div class="chart-title">Membership Tiers</div>
+            <div class="chart-value" id="aMemberTotal" style="color:var(--text)">—</div>
+            <div class="chart-wrap-sm">
+              <canvas id="chartMembership"></canvas>
+            </div>
+            <div class="chart-legend" id="legendMembership"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Withdrawal Status</div>
+            <div class="chart-value" id="aWdTotal" style="color:var(--text)">—</div>
+            <div class="chart-wrap-sm">
+              <canvas id="chartWithdrawals"></canvas>
+            </div>
+            <div class="chart-legend" id="legendWithdrawals"></div>
+          </div>
+        </div>
+
+      </div>
+
       <!-- ── CREATE MARKET ──────────────────────────────────── -->
       <!-- ── AI GENERATOR PAGE ─────────────────────────────── -->
       <div class="page" id="page-aigen">
@@ -833,29 +1016,114 @@
 <div id="toast"></div>
 
 <script>
+// ── CONFIG ──────────────────────────────────────────────────────
+// NOTE: The anon key below is safe to be public — it's like a project ID.
+// It is NOT a secret. Real security comes from Supabase Row Level Security (RLS).
+// NEVER put your service_role key here. That one is secret and must stay server-side only.
 var SUPABASE_URL  = "https://liketekvzrazheolmfnj.supabase.co";
 var SUPABASE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxpa2V0ZWt2enJhemhlb2xtZm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDg0MzYsImV4cCI6MjA4NjgyNDQzNn0.8Zo-NJ0QmaH95zt3Nh4yV20M0HM5OOH9V0cDs1xYpPE";
-var ADMIN_PASS    = "Lovemelikeyoudo@1923";
+
+// REMOVED: ADMIN_PASS is gone. No hardcoded password in source code anymore.
+// Admin identity is now verified by Supabase Auth on the server side.
+
 var db            = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// adminSecret is now the Supabase JWT session token (not the plain password).
+// JWT tokens are cryptographically signed and expire automatically after 1 hour.
 var adminSecret   = "";
 var allUsersData  = [];
 var allOpinions   = [];
 var currentPage   = "overview";
 
-// ── LOGIN ───────────────────────────────────────────────────────
-function login() {
-  var pw = document.getElementById("passwordInput").value;
-  if (pw !== ADMIN_PASS) {
-    document.getElementById("loginError").style.display = "block";
+// ── LOGIN (SECURE) ───────────────────────────────────────────────
+// How this works (like a kid explanation):
+// OLD way: we kept the secret password written on a note in the browser. Anyone could read it.
+// NEW way: we send email+password to Supabase's server. The server checks against a hashed
+// database, and if correct sends back a "visitor badge" (JWT token) that expires in 1 hour.
+// The password never lives in our code at all!
+async function login() {
+  var email = document.getElementById("adminEmail").value.trim();
+  var pw    = document.getElementById("passwordInput").value;
+  var btn   = document.getElementById("loginBtn");
+  var errEl = document.getElementById("loginError");
+
+  // Basic empty field check
+  if (!email || !pw) {
+    errEl.innerText      = "Please enter your email and password.";
+    errEl.style.display  = "block";
     return;
   }
-  adminSecret = pw;
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("dashboard").style.display = "flex";
-  startClock();
-  loadOverview();
-  loadBadges();
+
+  // Show loading state
+  btn.innerText = "Logging in...";
+  btn.disabled  = true;
+  errEl.style.display = "none";
+
+  try {
+    // SECURE: This call goes to Supabase's server — it is NOT checked in the browser
+    var result = await db.auth.signInWithPassword({ email: email, password: pw });
+
+    if (result.error) {
+      // Supabase said no — show a generic error (don't leak info about which field was wrong)
+      errEl.innerText     = "Wrong email or password. Please try again.";
+      errEl.style.display = "block";
+      return;
+    }
+
+    // ADMIN ROLE CHECK: Even if the login succeeded, make sure this account is actually admin.
+    // The user_group column already exists in your users table — we check it equals "admin".
+    // Without this, any regular app user could log into the admin panel!
+    var roleCheck = await db
+      .from("users")
+      .select("user_group")
+      .eq("email", result.data.user.email)
+      .single();
+
+    if (!roleCheck.data || roleCheck.data.user_group !== "admin") {
+      // They authenticated fine, but they're not an admin — kick them out immediately
+      await db.auth.signOut();
+      errEl.innerText     = "Access denied. Admin accounts only.";
+      errEl.style.display = "block";
+      return;
+    }
+
+    // Store the JWT access token as adminSecret (replaces the old plain-text password)
+    // This token is sent to edge functions in the x-admin-secret header — same as before
+    // but now it's a secure, expiring token instead of your password
+    adminSecret = result.data.session.access_token;
+
+    // AUTO-LOGOUT: Watch for session expiry. When the 1-hour session expires,
+    // Supabase fires SIGNED_OUT — we send the admin back to the login screen automatically.
+    db.auth.onAuthStateChange(function(event) {
+      if (event === "SIGNED_OUT") {
+        adminSecret = "";
+        document.getElementById("loginScreen").style.display  = "flex";
+        document.getElementById("dashboard").style.display    = "none";
+        // Clear sensitive fields so they can't be read from the DOM
+        document.getElementById("adminEmail").value    = "";
+        document.getElementById("passwordInput").value = "";
+      }
+    });
+
+    // All good — show the dashboard
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("dashboard").style.display   = "flex";
+    startClock();
+    loadOverview();
+    loadBadges();
+
+  } catch (err) {
+    // Network error or unexpected crash
+    errEl.innerText     = "Connection error. Please try again.";
+    errEl.style.display = "block";
+    console.error("Admin login error:", err);
+  } finally {
+    // Always re-enable the button no matter what happened
+    btn.innerText = "Login";
+    btn.disabled  = false;
+  }
 }
+
+// Allow Enter key on either field to submit
 document.getElementById("passwordInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") login();
 });
@@ -874,10 +1142,11 @@ function showPage(name) {
   document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("active"); });
   document.querySelectorAll(".nav-item").forEach(function(b){ b.classList.remove("active"); });
   document.getElementById("page-" + name).classList.add("active");
+  if (name === "analytics") loadAnalytics();
   if (name === "aigen") loadAIQueue();
   document.getElementById("nav-" + name).classList.add("active");
   currentPage = name;
-  var titles = {overview:"Overview",markets:"Markets",opinions:"Community Opinions",users:"Users",withdrawals:"Withdrawals",questions:"Submitted Questions",create:"Create Market"};
+  var titles = {overview:"Overview",markets:"Markets",opinions:"Community Opinions",users:"Users",withdrawals:"Withdrawals",questions:"Submitted Questions",aigen:"AI Generator",analytics:"Analytics",create:"Create Market"};
   document.getElementById("pageTitle").innerText = titles[name] || name;
   // Auto-load
   if (name === "markets")     loadMarkets();
@@ -1258,11 +1527,15 @@ async function changeGroup(key, group) {
 async function adjustBalance(key) {
   var inp = document.getElementById("adj-"+key);
   var amt = parseInt(inp.value);
-  if (isNaN(amt)||amt===0) { toast("Enter e.g. 500 or -100","err"); return; }
+  // SECURE: must be a non-zero integer within safe bounds — blocks overflow attacks
+  if (isNaN(amt) || amt === 0) { toast("Enter e.g. 500 or -100", "err"); return; }
+  if (!Number.isInteger(amt)) { toast("Amount must be a whole number", "err"); return; }
+  if (Math.abs(amt) > 1000000) { toast("Amount too large (max ±1,000,000)", "err"); return; }
   var u = allUsersData.find(function(u){ return (u.telegram_id||u.email||"")===key; });
   if (!u) return;
   var newBal = u.balance_points + amt;
-  if (newBal < 0) { toast("Would go negative! Current: "+u.balance_points+" pts","err"); return; }
+  if (newBal < 0) { toast("Would go negative! Current: "+u.balance_points+" pts", "err"); return; }
+  if (newBal > 100000000) { toast("New balance exceeds safe limit", "err"); return; }
   var r = await db.from("wallets").update({balance_points:newBal}).eq("telegram_id",u.telegram_id);
   if (r.error) { toast("Error: "+r.error.message,"err"); return; }
   u.balance_points = newBal;
@@ -1461,15 +1734,27 @@ async function reviewQ(id, action) {
 
 // ── CREATE MARKET ────────────────────────────────────────────────
 async function createMarket() {
-  var q = document.getElementById("newQuestion").value.trim();
-  var c = document.getElementById("newClosesAt").value;
-  if (!q) { toast("Enter a question","err"); return; }
-  if (!c) { toast("Set closing date","err"); return; }
+  var rawQ = document.getElementById("newQuestion").value.trim();
+  var c    = document.getElementById("newClosesAt").value;
+
+  // SECURE: strip HTML tags from question text — prevent stored XSS in markets table
+  var q = rawQ.replace(/<[^>]*>/g, "").replace(/javascript:/gi, "").trim();
+
+  if (!q) { toast("Enter a question", "err"); return; }
+  if (q.length < 10) { toast("Question too short (min 10 chars)", "err"); return; }
+  if (q.length > 300) { toast("Question too long (max 300 chars)", "err"); return; }
+  if (!c) { toast("Set closing date", "err"); return; }
+
+  // SECURE: closing date must be in the future
+  var closeDate = new Date(c);
+  if (isNaN(closeDate.getTime())) { toast("Invalid closing date", "err"); return; }
+  if (closeDate <= new Date()) { toast("Closing date must be in the future", "err"); return; }
+
   try {
-    var res = await fetch(SUPABASE_URL+"/functions/v1/admin-create-market",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","x-admin-secret":adminSecret},
-      body:JSON.stringify({question:q,closes_at:new Date(c).toISOString()})
+    var res = await fetch(SUPABASE_URL+"/functions/v1/admin-create-market", {
+      method: "POST",
+      headers: {"Content-Type":"application/json","x-admin-secret":adminSecret},
+      body: JSON.stringify({question:q, closes_at:closeDate.toISOString()})
     });
     var data = await res.json();
     if (!res.ok) { toast("Error: "+(data.error||"unknown"),"err"); return; }
@@ -1480,6 +1765,276 @@ async function createMarket() {
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────
+
+// ── ANALYTICS ───────────────────────────────────────────────────
+// Stores chart instances so we can destroy and recreate on reload
+var _charts = {};
+
+function makeChart(id, config) {
+  if (_charts[id]) { _charts[id].destroy(); }
+  var ctx = document.getElementById(id);
+  if (!ctx) return;
+  _charts[id] = new Chart(ctx, config);
+}
+
+// Shared Chart.js defaults matching the dark admin theme
+Chart.defaults.color = "#50505a";
+Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+
+var CHART_COLORS = {
+  green:  "#2fd158",
+  red:    "#ff453a",
+  blue:   "#0a84ff",
+  amber:  "#ff9f0a",
+  purple: "#bf5af2",
+  teal:   "#5ac8fa",
+  pink:   "#ff375f",
+  gray:   "#50505a"
+};
+
+async function loadAnalytics() {
+  try {
+    // Fetch all data in parallel
+    var [trades, markets, users, wallets, withdrawals] = await Promise.all([
+      db.from("trades").select("status,option,amount_points,created_at"),
+      db.from("markets").select("status,yes_pool,no_pool,result"),
+      db.from("users").select("user_group,membership_tier,created_at"),
+      db.from("wallets").select("balance_points,referral_points"),
+      db.from("withdrawals").select("status,amount_points,amount_eur")
+    ]);
+
+    var tradeData   = trades.data    || [];
+    var marketData  = markets.data   || [];
+    var userData    = users.data     || [];
+    var walletData  = wallets.data   || [];
+    var wdData      = withdrawals.data || [];
+
+    // ── KPI CARDS ──────────────────────────────────────────────
+    // Win rate YES: settled markets where result = YES
+    var settled = marketData.filter(function(m){ return m.status === "settled"; });
+    var yesWins = settled.filter(function(m){ return m.result === "YES"; }).length;
+    var winRate = settled.length > 0 ? Math.round(yesWins / settled.length * 100) : 0;
+    document.getElementById("aKpiWinYes").innerText = winRate + "%";
+
+    // Avg stake
+    var totalStake = tradeData.reduce(function(s,t){ return s + Number(t.amount_points||0); }, 0);
+    var avgStake = tradeData.length > 0 ? Math.round(totalStake / tradeData.length) : 0;
+    document.getElementById("aKpiAvgStake").innerText = avgStake.toLocaleString() + " pts";
+
+    // Revenue (5% of all stakes as a proxy — real data would use platform_revenue table)
+    var revenue = Math.round(totalStake * 0.05);
+    document.getElementById("aKpiRevenue").innerText = revenue > 999 ? (revenue/1000).toFixed(1)+"K pts" : revenue+" pts";
+
+    // Active traders (unique telegram_ids with at least one trade)
+    document.getElementById("aKpiActive").innerText = tradeData.length > 0
+      ? new Set(tradeData.map(function(t){ return t.telegram_id; })).size
+      : "—";
+
+    // ── CHART 1: Trade Outcomes Pie ────────────────────────────
+    var outcomes = { won: 0, lost: 0, open: 0, cancelled: 0 };
+    tradeData.forEach(function(t){
+      var s = (t.status || "open").toLowerCase();
+      if (outcomes[s] !== undefined) outcomes[s]++;
+      else outcomes.open++;
+    });
+    document.getElementById("aTradeTotal").innerText = tradeData.length.toLocaleString() + " trades";
+    makeChart("chartTradeOutcomes", {
+      type: "doughnut",
+      data: {
+        labels: ["Won", "Lost", "Open", "Cancelled"],
+        datasets: [{
+          data: [outcomes.won, outcomes.lost, outcomes.open, outcomes.cancelled],
+          backgroundColor: [CHART_COLORS.green, CHART_COLORS.red, CHART_COLORS.blue, CHART_COLORS.gray],
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: "68%",
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(c){ return " " + c.label + ": " + c.raw.toLocaleString(); } } }
+        }
+      }
+    });
+    renderLegend("legendTradeOutcomes",
+      ["Won","Lost","Open","Cancelled"],
+      [CHART_COLORS.green, CHART_COLORS.red, CHART_COLORS.blue, CHART_COLORS.gray],
+      [outcomes.won, outcomes.lost, outcomes.open, outcomes.cancelled]
+    );
+
+    // ── CHART 2: User Groups Pie ───────────────────────────────
+    var groups = {};
+    userData.forEach(function(u){
+      var g = u.user_group || "cassino";
+      groups[g] = (groups[g] || 0) + 1;
+    });
+    var gLabels = Object.keys(groups);
+    var gVals   = gLabels.map(function(k){ return groups[k]; });
+    var gColors = [CHART_COLORS.purple, CHART_COLORS.teal, CHART_COLORS.amber, CHART_COLORS.pink, CHART_COLORS.blue];
+    document.getElementById("aUserTotal").innerText = userData.length.toLocaleString() + " users";
+    makeChart("chartUserGroups", {
+      type: "doughnut",
+      data: {
+        labels: gLabels,
+        datasets: [{ data: gVals, backgroundColor: gColors.slice(0, gLabels.length), borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: "68%",
+        plugins: { legend: { display: false } }
+      }
+    });
+    renderLegend("legendUserGroups", gLabels, gColors, gVals);
+
+    // ── CHART 3: Stake Distribution Bar ───────────────────────
+    var brackets = { "100–499": 0, "500–999": 0, "1K–2.4K": 0, "2.5K–4.9K": 0, "5K–9.9K": 0, "10K+": 0 };
+    tradeData.forEach(function(t){
+      var s = Number(t.amount_points || 0);
+      if      (s < 500)   brackets["100–499"]++;
+      else if (s < 1000)  brackets["500–999"]++;
+      else if (s < 2500)  brackets["1K–2.4K"]++;
+      else if (s < 5000)  brackets["2.5K–4.9K"]++;
+      else if (s < 10000) brackets["5K–9.9K"]++;
+      else                brackets["10K+"]++;
+    });
+    makeChart("chartStakeDist", {
+      type: "bar",
+      data: {
+        labels: Object.keys(brackets),
+        datasets: [{
+          label: "Trades",
+          data: Object.values(brackets),
+          backgroundColor: CHART_COLORS.blue + "cc",
+          borderColor: CHART_COLORS.blue,
+          borderWidth: 1,
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#50505a" } },
+          y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#50505a" }, beginAtZero: true }
+        }
+      }
+    });
+
+    // ── CHART 4: Market Status Pie ─────────────────────────────
+    var mStatus = { open: 0, closed: 0, settled: 0 };
+    marketData.forEach(function(m){ if (mStatus[m.status] !== undefined) mStatus[m.status]++; });
+    document.getElementById("aMarketTotal").innerText = marketData.length.toLocaleString() + " markets";
+    makeChart("chartMarketStatus", {
+      type: "doughnut",
+      data: {
+        labels: ["Open", "Closed", "Settled"],
+        datasets: [{
+          data: [mStatus.open, mStatus.closed, mStatus.settled],
+          backgroundColor: [CHART_COLORS.green, CHART_COLORS.amber, CHART_COLORS.gray],
+          borderWidth: 0, hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: "68%",
+        plugins: { legend: { display: false } }
+      }
+    });
+    renderLegend("legendMarketStatus",
+      ["Open","Closed","Settled"],
+      [CHART_COLORS.green, CHART_COLORS.amber, CHART_COLORS.gray],
+      [mStatus.open, mStatus.closed, mStatus.settled]
+    );
+
+    // ── CHART 5: YES vs NO Volume Bar ─────────────────────────
+    // Top 8 open markets by total pool
+    var openMkts = marketData
+      .filter(function(m){ return m.status === "open"; })
+      .map(function(m){ return { yes: Number(m.yes_pool||0), no: Number(m.no_pool||0) }; })
+      .sort(function(a,b){ return (b.yes+b.no)-(a.yes+a.no); })
+      .slice(0, 8);
+    makeChart("chartYesNo", {
+      type: "bar",
+      data: {
+        labels: openMkts.map(function(_,i){ return "M"+(i+1); }),
+        datasets: [
+          { label: "YES", data: openMkts.map(function(m){ return m.yes; }), backgroundColor: CHART_COLORS.green + "cc", borderColor: CHART_COLORS.green, borderWidth: 1, borderRadius: 4, borderSkipped: false },
+          { label: "NO",  data: openMkts.map(function(m){ return m.no;  }), backgroundColor: CHART_COLORS.red   + "cc", borderColor: CHART_COLORS.red,   borderWidth: 1, borderRadius: 4, borderSkipped: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: "#9090a0", boxWidth: 10, padding: 12 } } },
+        scales: {
+          x: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#50505a" } },
+          y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#50505a" }, beginAtZero: true }
+        }
+      }
+    });
+
+    // ── CHART 6: Membership Tiers Pie ─────────────────────────
+    var tiers = { free: 0, basic: 0, pro: 0, elite: 0 };
+    userData.forEach(function(u){ var t = u.membership_tier || "free"; if (tiers[t] !== undefined) tiers[t]++; else tiers.free++; });
+    document.getElementById("aMemberTotal").innerText = userData.length.toLocaleString() + " users";
+    makeChart("chartMembership", {
+      type: "doughnut",
+      data: {
+        labels: ["Free", "Basic", "Pro", "Elite"],
+        datasets: [{ data: [tiers.free, tiers.basic, tiers.pro, tiers.elite], backgroundColor: [CHART_COLORS.gray, CHART_COLORS.blue, CHART_COLORS.purple, CHART_COLORS.amber], borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: "68%",
+        plugins: { legend: { display: false } }
+      }
+    });
+    renderLegend("legendMembership",
+      ["Free","Basic","Pro","Elite"],
+      [CHART_COLORS.gray, CHART_COLORS.blue, CHART_COLORS.purple, CHART_COLORS.amber],
+      [tiers.free, tiers.basic, tiers.pro, tiers.elite]
+    );
+
+    // ── CHART 7: Withdrawal Status Pie ────────────────────────
+    var wdStatus = { pending: 0, processing: 0, completed: 0, rejected: 0 };
+    wdData.forEach(function(w){ if (wdStatus[w.status] !== undefined) wdStatus[w.status]++; else wdStatus.pending++; });
+    document.getElementById("aWdTotal").innerText = wdData.length.toLocaleString() + " requests";
+    makeChart("chartWithdrawals", {
+      type: "doughnut",
+      data: {
+        labels: ["Pending","Processing","Completed","Rejected"],
+        datasets: [{ data: [wdStatus.pending, wdStatus.processing, wdStatus.completed, wdStatus.rejected], backgroundColor: [CHART_COLORS.amber, CHART_COLORS.blue, CHART_COLORS.green, CHART_COLORS.red], borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: "68%",
+        plugins: { legend: { display: false } }
+      }
+    });
+    renderLegend("legendWithdrawals",
+      ["Pending","Processing","Completed","Rejected"],
+      [CHART_COLORS.amber, CHART_COLORS.blue, CHART_COLORS.green, CHART_COLORS.red],
+      [wdStatus.pending, wdStatus.processing, wdStatus.completed, wdStatus.rejected]
+    );
+
+  } catch(e) { console.error("loadAnalytics error:", e); }
+}
+
+// Renders a custom legend below each doughnut chart
+function renderLegend(id, labels, colors, values) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = labels.map(function(label, i){
+    return '<div class="chart-legend-item">'
+      + '<div class="chart-legend-dot" style="background:' + colors[i] + '"></div>'
+      + esc(label) + ': <strong style="color:var(--text)">' + (values[i]||0).toLocaleString() + '</strong>'
+      + '</div>';
+  }).join("");
+}
+
 function timeAgo(dateStr) {
   var diff = Date.now() - new Date(dateStr).getTime();
   var m = Math.floor(diff/60000);
