@@ -409,15 +409,10 @@
   <div class="login-card">
     <div class="login-logo">My <span>Opinio</span></div>
     <div class="login-sub">Admin Dashboard · Restricted Access</div>
-    <!-- Email field — admin must enter their email, not just a shared password -->
-    <input class="login-input" type="email" id="adminEmail" placeholder="Admin email"
-      onkeydown="if(event.key==='Enter')login()" style="margin-bottom:10px"/>
-    <!-- Password field — still here but now checked by Supabase server, not in the browser -->
     <input class="login-input" type="password" id="passwordInput" placeholder="Admin password"
       onkeydown="if(event.key==='Enter')login()"/>
-    <button class="login-btn" id="loginBtn" onclick="login()">Login</button>
-    <!-- Error message is now dynamic, set by JS below -->
-    <div class="login-err" id="loginError"></div>
+    <button class="login-btn" onclick="login()">Login</button>
+    <div class="login-err" id="loginError">Wrong password. Try again.</div>
   </div>
 </div>
 
@@ -838,114 +833,29 @@
 <div id="toast"></div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────
-// NOTE: The anon key below is safe to be public — it's like a project ID.
-// It is NOT a secret. Real security comes from Supabase Row Level Security (RLS).
-// NEVER put your service_role key here. That one is secret and must stay server-side only.
 var SUPABASE_URL  = "https://liketekvzrazheolmfnj.supabase.co";
 var SUPABASE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxpa2V0ZWt2enJhemhlb2xtZm5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDg0MzYsImV4cCI6MjA4NjgyNDQzNn0.8Zo-NJ0QmaH95zt3Nh4yV20M0HM5OOH9V0cDs1xYpPE";
-
-// REMOVED: ADMIN_PASS is gone. No hardcoded password in source code anymore.
-// Admin identity is now verified by Supabase Auth on the server side.
-
+var ADMIN_PASS    = "Lovemelikeyoudo@1923";
 var db            = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-// adminSecret is now the Supabase JWT session token (not the plain password).
-// JWT tokens are cryptographically signed and expire automatically after 1 hour.
 var adminSecret   = "";
 var allUsersData  = [];
 var allOpinions   = [];
 var currentPage   = "overview";
 
-// ── LOGIN (SECURE) ───────────────────────────────────────────────
-// How this works (like a kid explanation):
-// OLD way: we kept the secret password written on a note in the browser. Anyone could read it.
-// NEW way: we send email+password to Supabase's server. The server checks against a hashed
-// database, and if correct sends back a "visitor badge" (JWT token) that expires in 1 hour.
-// The password never lives in our code at all!
-async function login() {
-  var email = document.getElementById("adminEmail").value.trim();
-  var pw    = document.getElementById("passwordInput").value;
-  var btn   = document.getElementById("loginBtn");
-  var errEl = document.getElementById("loginError");
-
-  // Basic empty field check
-  if (!email || !pw) {
-    errEl.innerText      = "Please enter your email and password.";
-    errEl.style.display  = "block";
+// ── LOGIN ───────────────────────────────────────────────────────
+function login() {
+  var pw = document.getElementById("passwordInput").value;
+  if (pw !== ADMIN_PASS) {
+    document.getElementById("loginError").style.display = "block";
     return;
   }
-
-  // Show loading state
-  btn.innerText = "Logging in...";
-  btn.disabled  = true;
-  errEl.style.display = "none";
-
-  try {
-    // SECURE: This call goes to Supabase's server — it is NOT checked in the browser
-    var result = await db.auth.signInWithPassword({ email: email, password: pw });
-
-    if (result.error) {
-      // Supabase said no — show a generic error (don't leak info about which field was wrong)
-      errEl.innerText     = "Wrong email or password. Please try again.";
-      errEl.style.display = "block";
-      return;
-    }
-
-    // ADMIN ROLE CHECK: Even if the login succeeded, make sure this account is actually admin.
-    // The user_group column already exists in your users table — we check it equals "admin".
-    // Without this, any regular app user could log into the admin panel!
-    var roleCheck = await db
-      .from("users")
-      .select("user_group")
-      .eq("email", result.data.user.email)
-      .single();
-
-    if (!roleCheck.data || roleCheck.data.user_group !== "admin") {
-      // They authenticated fine, but they're not an admin — kick them out immediately
-      await db.auth.signOut();
-      errEl.innerText     = "Access denied. Admin accounts only.";
-      errEl.style.display = "block";
-      return;
-    }
-
-    // Store the JWT access token as adminSecret (replaces the old plain-text password)
-    // This token is sent to edge functions in the x-admin-secret header — same as before
-    // but now it's a secure, expiring token instead of your password
-    adminSecret = result.data.session.access_token;
-
-    // AUTO-LOGOUT: Watch for session expiry. When the 1-hour session expires,
-    // Supabase fires SIGNED_OUT — we send the admin back to the login screen automatically.
-    db.auth.onAuthStateChange(function(event) {
-      if (event === "SIGNED_OUT") {
-        adminSecret = "";
-        document.getElementById("loginScreen").style.display  = "flex";
-        document.getElementById("dashboard").style.display    = "none";
-        // Clear sensitive fields so they can't be read from the DOM
-        document.getElementById("adminEmail").value    = "";
-        document.getElementById("passwordInput").value = "";
-      }
-    });
-
-    // All good — show the dashboard
-    document.getElementById("loginScreen").style.display = "none";
-    document.getElementById("dashboard").style.display   = "flex";
-    startClock();
-    loadOverview();
-    loadBadges();
-
-  } catch (err) {
-    // Network error or unexpected crash
-    errEl.innerText     = "Connection error. Please try again.";
-    errEl.style.display = "block";
-    console.error("Admin login error:", err);
-  } finally {
-    // Always re-enable the button no matter what happened
-    btn.innerText = "Login";
-    btn.disabled  = false;
-  }
+  adminSecret = pw;
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("dashboard").style.display = "flex";
+  startClock();
+  loadOverview();
+  loadBadges();
 }
-
-// Allow Enter key on either field to submit
 document.getElementById("passwordInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") login();
 });
