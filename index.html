@@ -6,6 +6,8 @@
   <title>My Opinio · Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- hCaptcha — brute force protection on admin login -->
+  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ── TOKENS ─────────────────────────────────────────────── */
@@ -493,6 +495,11 @@
     <!-- Password field — still here but now checked by Supabase server, not in the browser -->
     <input class="login-input" type="password" id="passwordInput" placeholder="Admin password"
       onkeydown="if(event.key==='Enter')login()"/>
+    <!-- hCaptcha widget — prevents bots from brute-forcing admin password -->
+    <div class="h-captcha" id="adminCaptcha"
+         data-sitekey="e04a4850-1422-420e-b13c-956a838263d4"
+         data-theme="dark"
+         style="margin:12px 0"></div>
     <button class="login-btn" id="loginBtn" onclick="login()">Login</button>
     <!-- Error message is now dynamic, set by JS below -->
     <div class="login-err" id="loginError"></div>
@@ -1053,19 +1060,37 @@ async function login() {
     return;
   }
 
+  // CAPTCHA CHECK: Admin must solve the puzzle before we even attempt login.
+  // This completely blocks bots from brute-forcing the admin password.
+  // hcaptcha.getResponse() returns empty string if not solved yet.
+  var captchaToken = "";
+  try { captchaToken = hcaptcha.getResponse(); } catch(e) {}
+  if (!captchaToken) {
+    errEl.innerText     = "Please complete the CAPTCHA first.";
+    errEl.style.display = "block";
+    return;
+  }
+
   // Show loading state
   btn.innerText = "Logging in...";
   btn.disabled  = true;
   errEl.style.display = "none";
 
   try {
-    // SECURE: This call goes to Supabase's server — it is NOT checked in the browser
-    var result = await db.auth.signInWithPassword({ email: email, password: pw });
+    // SECURE: Pass the captcha token to Supabase — it verifies with hCaptcha servers.
+    // Without a valid token, Supabase will reject the login attempt entirely.
+    var result = await db.auth.signInWithPassword({
+      email:    email,
+      password: pw,
+      options:  { captchaToken: captchaToken }
+    });
 
     if (result.error) {
-      // Supabase said no — show a generic error (don't leak info about which field was wrong)
+      // Supabase said no — show a generic error (don't leak which field was wrong)
       errEl.innerText     = "Wrong email or password. Please try again.";
       errEl.style.display = "block";
+      // Reset captcha so they can try again with a fresh token
+      try { hcaptcha.reset(); } catch(e) {}
       return;
     }
 
@@ -1120,6 +1145,8 @@ async function login() {
     // Always re-enable the button no matter what happened
     btn.innerText = "Login";
     btn.disabled  = false;
+    // Reset captcha on every attempt — requires fresh solve each time
+    try { hcaptcha.reset(); } catch(e) {}
   }
 }
 
