@@ -806,7 +806,7 @@ async function loadMarkets() {
 async function settleMarket(id,result){
   if(!confirm("Settle as "+result+"?"))return;
   try{
-    var res=await fetch(SUPABASE_URL+"/functions/v1/admin-force-settle",{method:"POST",headers:{"Content-Type":"application/json","x-admin-secret":adminSecret},body:JSON.stringify({market_id:id,result:result})});
+    var res=await fetch(SUPABASE_URL+"/functions/v1/admin-force-settle",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+adminSecret,"x-admin-secret":adminSecret},body:JSON.stringify({market_id:id,result:result})});
     var data=await res.json(); if(!res.ok){toast("Error: "+(data.error||"unknown"),"err");return;}
     await db.from("markets").update({status:"settled"}).eq("id",id); toast("✅ Market settled!"); loadMarkets();
   }catch(e){toast("Error: "+e.message,"err");}
@@ -947,7 +947,7 @@ async function loadWithdrawals(){
 }
 async function processWd(id,action){
   var note=""; if(action==="reject")note=prompt("Rejection reason:")||""; if(action==="complete")note=prompt("Reference note:")||"";
-  try{var res=await fetch(SUPABASE_URL+"/functions/v1/process-withdrawal",{method:"POST",headers:{"Content-Type":"application/json","x-admin-secret":adminSecret},body:JSON.stringify({withdrawal_id:id,action:action,admin_note:note})});var data=await res.json();if(!res.ok){toast("Error: "+(data.error||"unknown"),"err");return;}toast("Done ✅");loadWithdrawals();loadBadges();}catch(e){toast("Error: "+e.message,"err");}
+  try{var res=await fetch(SUPABASE_URL+"/functions/v1/process-withdrawal",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+adminSecret,"x-admin-secret":adminSecret},body:JSON.stringify({withdrawal_id:id,action:action,admin_note:note})});var data=await res.json();if(!res.ok){toast("Error: "+(data.error||"unknown"),"err");return;}toast("Done ✅");loadWithdrawals();loadBadges();}catch(e){toast("Error: "+e.message,"err");}
 }
 
 // ══════════════════════════════════════════════════
@@ -970,7 +970,7 @@ async function loadQuestions(){
 async function reviewQ(id,action){
   var closesAt=""; if(action==="approve"){closesAt=prompt("Close date? (blank = 7 days)\nFormat: 2026-12-31T23:59:00")||"";if(!closesAt.trim()){var d=new Date();d.setDate(d.getDate()+7);closesAt=d.toISOString();}}
   try{
-    var res=await fetch(SUPABASE_URL+"/functions/v1/review-question",{method:"POST",headers:{"Content-Type":"application/json","x-admin-secret":adminSecret},body:JSON.stringify({submission_id:id,action:action,closes_at:closesAt})});
+    var res=await fetch(SUPABASE_URL+"/functions/v1/review-question",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+adminSecret,"x-admin-secret":adminSecret},body:JSON.stringify({submission_id:id,action:action,closes_at:closesAt})});
     var data=await res.json(); if(res.ok){toast(action==="approve"?"✅ Approved — market created!":"Rejected & refunded");loadQuestions();loadBadges();return;}
     if(res.status===401){toast("Unauthorized","err");return;}
     if(action==="approve"&&confirm("Edge fn failed: "+(data.error||"?")+"\nFallback: mark approved in DB?")){await db.from("question_submissions").update({status:"approved"}).eq("id",id);toast("Marked approved");loadQuestions();}
@@ -986,7 +986,7 @@ async function createMarket(){
   if(!q){toast("Enter a question","err");return;} if(q.length<10){toast("Too short (min 10)","err");return;} if(!c){toast("Set closing date","err");return;}
   var closeDate=new Date(c); if(isNaN(closeDate.getTime())||closeDate<=new Date()){toast("Date must be in the future","err");return;}
   try{
-    var res=await fetch(SUPABASE_URL+"/functions/v1/admin-create-market",{method:"POST",headers:{"Content-Type":"application/json","x-admin-secret":adminSecret},body:JSON.stringify({question:q,closes_at:closeDate.toISOString()})});
+    var res=await fetch(SUPABASE_URL+"/functions/v1/admin-create-market",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+adminSecret,"x-admin-secret":adminSecret},body:JSON.stringify({question:q,closes_at:closeDate.toISOString()})});
     var data=await res.json(); if(!res.ok){toast("Error: "+(data.error||"unknown"),"err");return;}
     document.getElementById("newQuestion").value=""; document.getElementById("newClosesAt").value=""; toast("✅ Market created!");
   }catch(e){toast("Error: "+e.message,"err");}
@@ -1175,7 +1175,7 @@ window.approveAI = async function(id, closesAt) {
   var qEl = document.getElementById('aigenq-'+id); var question = qEl ? qEl.innerText : '';
   if(!confirm('Create market:\n\n"'+question+'"\n\nClose: '+new Date(closesAt||Date.now()).toLocaleDateString('en-GB')+'\n\nProceed?')) return;
   var card = document.getElementById('aigencard-'+id); if(card) card.style.opacity='0.5';
-  var res = await fetch(SUPABASE_URL+'/functions/v1/admin-create-market',{method:'POST',headers:{'Content-Type':'application/json','x-admin-secret':adminSecret},body:JSON.stringify({question:question,closes_at:closesAt})});
+  var res = await fetch(SUPABASE_URL+'/functions/v1/admin-create-market',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+adminSecret,'x-admin-secret':adminSecret},body:JSON.stringify({question:question,closes_at:closesAt})});
   var data = await res.json();
   if(!res.ok){if(card)card.style.opacity='1';toast('Failed: '+(data.error||'unknown'),'err');return;}
   await db.from('market_suggestions').update({status:'approved'}).eq('id',id);
@@ -1209,7 +1209,7 @@ window.approveAllAI = async function() {
   for(var i=0;i<pending.length;i++){
     var q=pending[i];
     try{
-      var res=await fetch(SUPABASE_URL+'/functions/v1/admin-create-market',{method:'POST',headers:{'Content-Type':'application/json','x-admin-secret':adminSecret},body:JSON.stringify({question:q.question,closes_at:q.resolution_time||q.closes_at})});
+      var res=await fetch(SUPABASE_URL+'/functions/v1/admin-create-market',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+adminSecret,'x-admin-secret':adminSecret},body:JSON.stringify({question:q.question,closes_at:q.resolution_time||q.closes_at})});
       if(res.ok){await db.from('market_suggestions').update({status:'approved'}).eq('id',q.id);q.status='approved';ok++;}else fail++;
     }catch(e){fail++;}
   }
@@ -1224,13 +1224,13 @@ window.runAIGenerator = async function() {
   function log(msg){statusEl.innerText+=msg+'\n'; statusEl.scrollTop=statusEl.scrollHeight;}
   log('Step 1: Fetching real-time trends…');
   try{
-    var r1=await fetch(SUPABASE_URL+'/functions/v1/fetch-trends',{method:'POST',headers:{'Content-Type':'application/json','x-admin-secret':adminSecret}});
+    var r1=await fetch(SUPABASE_URL+'/functions/v1/fetch-trends',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+adminSecret,'x-admin-secret':adminSecret}});
     var d1=await r1.json(); if(!r1.ok)throw new Error(d1.error||'fetch-trends failed');
     log('Trends fetched!'); var src=d1.events_by_source||{}; Object.keys(src).forEach(function(k){log('  '+k+': '+src[k]);}); log('Total saved: '+d1.total_saved+' new events');
   }catch(e){log('fetch-trends warning: '+e.message+' — continuing…');}
   log(''); log('Step 2: Asking Groq AI to generate questions…');
   try{
-    var r2=await fetch(SUPABASE_URL+'/functions/v1/generate-markets',{method:'POST',headers:{'Content-Type':'application/json','x-admin-secret':adminSecret}});
+    var r2=await fetch(SUPABASE_URL+'/functions/v1/generate-markets',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+adminSecret,'x-admin-secret':adminSecret}});
     var d2=await r2.json(); if(!r2.ok)throw new Error(d2.error||'generate-markets failed');
     if(d2.suggestions_created===0){log(d2.message||'No new questions generated.');log('Tip: Try again in a few minutes.');}
     else log('✅ AI generated '+d2.suggestions_created+' questions from '+d2.events_processed+' events!');
