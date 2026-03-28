@@ -6,7 +6,6 @@
   <title>My Opinio · Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -343,7 +342,6 @@
     <div class="login-sub">Admin Panel · Restricted Access</div>
     <input class="login-input" type="email" id="adminEmail" placeholder="Admin email" onkeydown="if(event.key==='Enter')login()" style="margin-bottom:10px"/>
     <input class="login-input" type="password" id="passwordInput" placeholder="Password" onkeydown="if(event.key==='Enter')login()"/>
-    <div class="h-captcha" id="adminCaptcha" data-sitekey="e04a4850-1422-420e-b13c-956a838263d4" data-theme="dark" style="margin:14px 0"></div>
     <button class="login-btn" id="loginBtn" onclick="login()">Sign In</button>
     <div class="login-err" id="loginError"></div>
   </div>
@@ -670,12 +668,10 @@ async function login() {
   var btn   = document.getElementById("loginBtn");
   var errEl = document.getElementById("loginError");
   if (!email || !pw) { errEl.innerText="Enter email and password."; errEl.style.display="block"; return; }
-  var captchaToken = ""; try { captchaToken = hcaptcha.getResponse(); } catch(e) {}
-  if (!captchaToken) { errEl.innerText="Complete the CAPTCHA first."; errEl.style.display="block"; return; }
   btn.innerText="Signing in…"; btn.disabled=true; errEl.style.display="none";
   try {
-    var result = await db.auth.signInWithPassword({ email, password: pw, options: { captchaToken } });
-    if (result.error) { errEl.innerText="Wrong email or password."; errEl.style.display="block"; try{hcaptcha.reset();}catch(e){} return; }
+    var result = await db.auth.signInWithPassword({ email, password: pw });
+    if (result.error) { errEl.innerText="Wrong email or password."; errEl.style.display="block"; return; }
     var roleCheck = await db.from("users").select("user_group").eq("email", result.data.user.email).single();
     if (!roleCheck.data || roleCheck.data.user_group !== "admin") { await db.auth.signOut(); errEl.innerText="Access denied. Admins only."; errEl.style.display="block"; return; }
     adminSecret = result.data.session.access_token;
@@ -686,7 +682,7 @@ async function login() {
     document.getElementById("dashboard").style.display="flex";
     startClock(); loadOverview(); loadBadges(); loadAIQueue();
   } catch(err) { errEl.innerText="Connection error. Try again."; errEl.style.display="block"; }
-  finally { btn.innerText="Sign In"; btn.disabled=false; try{hcaptcha.reset();}catch(e){} }
+  finally { btn.innerText="Sign In"; btn.disabled=false; }
 }
 document.getElementById("passwordInput").addEventListener("keydown", function(e){ if(e.key==="Enter")login(); });
 
